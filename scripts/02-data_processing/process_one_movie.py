@@ -110,12 +110,24 @@ while(1):
         difference_number = difference_number + 1
 
         # add the current data to the dataframe
-        dyad_differenced_dataframe = dyad_differenced_dataframe.append(pd.Series(difference_number)                                                                       .append(pd.Series(np.squeeze(                                                                                np.asarray(whole_frame_movement.flatten())))).reset_index(drop=True),
-            ignore_index=True)
-        participant_differenced_dataframe = participant_differenced_dataframe.append(pd.Series(difference_number)                                                                    .append(pd.Series('left'))                                                                    .append(pd.Series(person_left_movement))                                                                    .reset_index(drop=True),
-                                                                ignore_index=True)
-        participant_differenced_dataframe = participant_differenced_dataframe.append(pd.Series(difference_number)                                                                    .append(pd.Series('right'))                                                                    .append(pd.Series(person_right_movement))                                                                    .reset_index(drop=True),
-                                                                ignore_index=True)
+        dyad_differenced_dataframe = (dyad_differenced_dataframe
+            .append(pd.Series(difference_number)
+            .append(pd.Series(np.squeeze(
+                    np.asarray(whole_frame_movement.flatten()))))
+            .reset_index(drop=True),
+            ignore_index=True))
+        participant_differenced_dataframe = (participant_differenced_dataframe
+            .append(pd.Series(difference_number)
+            .append(pd.Series('left'))
+            .append(pd.Series(person_left_movement))
+            .reset_index(drop=True),
+            ignore_index=True))
+        participant_differenced_dataframe = (participant_differenced_dataframe
+            .append(pd.Series(difference_number)
+            .append(pd.Series('right'))
+            .append(pd.Series(person_right_movement))
+            .reset_index(drop=True),
+            ignore_index=True))
     else:
         break
 
@@ -124,7 +136,8 @@ video_capture.release()
 # cv2.destroyAllWindows()
 
 # rename columns
-dyad_differenced_dataframe.columns = ['difference_number'] + ['frame_col'+str(i) for i in range(image_dimensions[0])]
+dyad_differenced_dataframe.columns = ['difference_number'] + ['frame_col' + str(i)
+    for i in range(image_dimensions[0])]
 participant_differenced_dataframe.columns = ['difference_number','participant','movement']
 
 # add the dyad name to the dataframes
