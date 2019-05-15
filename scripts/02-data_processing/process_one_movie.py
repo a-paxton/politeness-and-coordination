@@ -55,14 +55,14 @@ previous_frame = cv2.bilateralFilter(previous_frame,9,75,75)
 # get image dimensions
 image_dimensions = previous_frame.shape
 single_person_height = image_dimensions[0]
-single_person_width = round(image_dimensions[1]/5*2)
-middle_gap = image_dimensions[1] - (single_person_width*2)
+single_person_width = round(image_dimensions[1]/3)
+# middle_gap = image_dimensions[1] - (single_person_width*2)
 
 # outline the two participants' spaces
-person_left_x_start = 0
+person_left_x_start = 0 + round(image_dimensions[1]*.09)
 person_left_x_end = person_left_x_start + single_person_width
-person_right_x_start = person_left_x_end + middle_gap
-person_right_x_end = image_dimensions[1]
+person_right_x_start = image_dimensions[1] - round(image_dimensions[1]*.09) - single_person_width
+person_right_x_end = image_dimensions[1] - round(image_dimensions[1]*.09)
 
 # specify left participant's matrix
 person_left_rows = np.array(range(single_person_height))

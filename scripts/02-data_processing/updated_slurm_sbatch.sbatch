@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#SBATCH --job-name=pac_fdm_20190414         # Name of the job.
-#SBATCH --output=slurm_output/pac_fdm-20190414-%A_%a.out       # Provide unique output files for each array task.
-#SBATCH --error=slurm_output/pac_fdm-20190414-%A_%a.err        # Provide unique error files for each array task.
+#SBATCH --job-name=pac_fdm_20190514         # Name of the job.
+#SBATCH --output=slurm_output/pac_fdm-20190514-%A_%a.out       # Provide unique output files for each array task.
+#SBATCH --error=slurm_output/pac_fdm-20190514-%A_%a.err        # Provide unique error files for each array task.
 #SBATCH --array=1-137                 # Provide index values the data in our folder
 #SBATCH --ntasks=1                    # We've only got one script we're running.
 #SBATCH -p RM-shared                  # Make sure we're using the "cheaper" nodes.
