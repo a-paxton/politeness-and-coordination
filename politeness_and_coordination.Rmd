@@ -7,43 +7,43 @@ output:
     number_sections: yes
 ---
 
-This R markdown provides the data preparation for our project analyzing how 
-power and politeness affect interpersonal movement synchrony during a variety 
-of interaction tasks (Paxton, Brown, & Winter, *in preparation*). 
+This R markdown provides the data preparation for our project analyzing how
+power and politeness affect interpersonal movement synchrony during a variety
+of interaction tasks (Paxton, Brown, & Winter, *in preparation*).
 
 To run this from scratch, you will need the following files:
 
-* `./data/movement_dataframes-aggregated/`: Directory of movement data 
-  derived from videos (30 FPS) using a frame-differencing method (e.g., Paxton 
-  & Dale, 2013, *Behavior Research Methods*). De-identified movement data are 
-  freely available in the OSF repository for the project: `https://osf.io/wrzf2/`.
-* `./scripts/03-data_analysis/required_packages-pac.r`: Installs required libraries, 
-  if they are not already installed. **NOTE**: This should be run *before* running 
-  this script.
-* `./scripts/03-data_analysis/libraries_and_functions-pac.r`: Loads in necessary 
-  libraries and creates new functions for our analyses.
+* `./data/movement_dataframes-aggregated/`: Directory of movement data
+derived from videos (30 FPS) using a frame-differencing method (e.g., Paxton
+& Dale, 2013, *Behavior Research Methods*). De-identified movement data are
+freely available in the OSF repository for the project: `https://osf.io/wrzf2/`.
+* `./scripts/03-data_analysis/required_packages-pac.r`: Installs required libraries,
+if they are not already installed. **NOTE**: This should be run *before* running
+this script.
+* `./scripts/03-data_analysis/libraries_and_functions-pac.r`: Loads in necessary
+libraries and creates new functions for our analyses.
 
-Additional files will be created during the initial run that will help reduce processing 
+Additional files will be created during the initial run that will help reduce processing
 time. Many of these are available as CSVs from the OSF repository listed above.
 
 **Code written by**: A. Paxton (University of Connecticut)
 
-**Date last modified**: 20 April 2019
+**Date last modified**: 10 June 2019
 
 ***
 
 # Data import
 
-**NOTE**: The chunks of code in this section do not have to be run each time, 
-since the resulting datasets will be saved to CSV files. As a result, these 
-chunks are currently set to `eval=FALSE`. Bear this in mind if these data 
+**NOTE**: The chunks of code in this section do not have to be run each time,
+since the resulting datasets will be saved to CSV files. As a result, these
+chunks are currently set to `eval=FALSE`. Bear this in mind if these data
 need to be re-calculated.
 
 ***
 
 ## Preliminaries
 
-This section clears the workspace, loads (and, if needed, installs) required 
+This section clears the workspace, loads (and, if needed, installs) required
 packages, and specifies important global variables.
 
 ```{r prep-prelim, warning = FALSE, error = FALSE, message = FALSE}
@@ -66,7 +66,7 @@ source('./scripts/03-data_analysis/libraries_and_functions-pac.r')
 After initial video processing, each video clip produced its own file of movement
 data. Here, we first pre-process the data by downsampling to 10Hz (consistent with previous
 research on movement coordination; cf. Paxton & Dale, 2013, *Behavior Research Methods*).
-We then remove first few seconds and last few seconds of the data from each conversation
+We then remove the first and last few seconds of the data from each conversation
 and concatenate all conversations' movement data into a single file.
 
 ```{r preprocess-concatenate-data, warning = FALSE, error = FALSE, message = FALSE, eval = FALSE}
@@ -82,11 +82,11 @@ post_downsample_butter = signal::butter(2,.02)
 # process each file
 conversation_df = data.frame()
 for (conversation_file in conversation_files){
-  
+
   # read in next file
   next_conversation = read.table(conversation_file, sep=',',
                                  header=TRUE, stringsAsFactors = FALSE)
-  
+
   # split info from dyad
   if (!grepl("Map", conversation_file)){
     next_conversation = next_conversation %>% ungroup() %>%
@@ -176,14 +176,14 @@ write.table(conversation_df,
 
 ## Summarize conversation information
 
-Now that we've prepared the data for recurrence analyses, let's find 
+Now that we've prepared the data for recurrence analyses, let's find
 out a bit more about the conversations.
 
 ```{r invisible-load-trimmed-for-stats, echo = FALSE}
 
 # invisible chunk: load in the conversation data to correctly display table if everything else is `eval=FALSE`
 conversation_df = read.table('./data/pac-filtered_movement_data.csv',
-                            sep=',',header=TRUE)
+                             sep=',',header=TRUE)
 
 ```
 
@@ -218,13 +218,13 @@ map_i_summary_df = filter(summary_stats, task=="Map_I")
 convo_summary_df = filter(summary_stats, task=="Convo")
 tweety_summary_df = filter(summary_stats, task=="Tweety")
 role_summary_df = filter(summary_stats, task=="Role")
-  
+
 # create histograms for each
 map_p_summary_hist = qplot(map_p_summary_df$max_time,
-                         geom = 'histogram', bins = 30) +
+                           geom = 'histogram', bins = 30) +
   xlim(c(0,15)) + ylab('Count') + xlab('Duration (min)') + ggtitle('Map task: Participant leads')
 map_i_summary_hist = qplot(map_i_summary_df$max_time,
-                         geom = 'histogram', bins = 30) +
+                           geom = 'histogram', bins = 30) +
   xlim(c(0,15)) + ylab('Count') + xlab('Duration (min)') + ggtitle('Map task: Partner leads')
 convo_summary_hist = qplot(convo_summary_df$max_time,
                            geom = 'histogram', bins = 30) +
@@ -308,47 +308,47 @@ source('./scripts/03-data_analysis/continuous_rqa_parameters-pac.r')
 
 # read in our crqa parameters
 conversation_df_crqa = read.table('./data/crqa_data_and_parameters-pac.csv',
-                         sep=',',header=TRUE) %>%
+                                  sep=',',header=TRUE) %>%
   select(-rr, -from.target, -movement_0, -movement_1)
-  
+
 # grab other information from the original df
 supplemental_info = conversation_df %>% ungroup() %>%
   select(participant_id, partner_type, task, participant_gender, condition) %>%
   distinct() %>%
-  
+
   # convert to partner type to numeric
   mutate(partner_type_str = partner_type) %>%
   mutate(partner_type = ifelse(partner_type=='Friend',
                                0,      # friend = 0
                                1)) %>% # prof = 1
-  
+
   # convert to gender to numeric
   mutate(participant_gender_str = participant_gender) %>%
   mutate(participant_gender = ifelse(participant_gender=='F',
                                      0,      # female = 0
                                      1)) %>% # male = 1
-  
+
   # convert to condition to numeric
   mutate(condition_str = condition) %>%
   mutate(condition = ifelse(condition=='AB',
                             0,      # AB = 0
                             1)) %>% # BA = 1
-  
+
   # convert to task to numeric
   mutate(task_str = task) %>%
   mutate(task = ifelse(task=='Convo',
                        1,                                  # Convo = 1
                        ifelse(task=='Map_P',
                               2,                           # Map, participant-lead = 2
-                              ifelse(task=='Map_I', 
+                              ifelse(task=='Map_I',
                                      3,                    # Map, partner-led = 3
                                      ifelse(task=='Role',
                                             4,             # Role = 4
-                                            5)))))          # Tweety = 5
-         
+                                            5)))))         # Tweety = 5
+
 # combine both
 conversation_df_crqa = full_join(supplemental_info,
-                                  conversation_df_crqa,
+                                 conversation_df_crqa,
                                  by = c("participant_id",
                                         "task_str"="task",
                                         "partner_type_str"="partner_type"))
@@ -360,7 +360,7 @@ conversation_df_crqa = full_join(supplemental_info,
 ## Run CRQA and DRPs
 
 Now that we have our parameters, we run continuous CRQA over each conversation
-for each dyad using the `crqa` function from the `crqa` package (Coco & Dale, 
+for each dyad using the `crqa` function from the `crqa` package (Coco & Dale,
 2014, *Frontiers in Psychology*).
 
 The time series are entered into the `crqa` function to allow us to interpret
@@ -377,7 +377,7 @@ win_size = target_seconds * downsampled_sampling_rate
 
 # slice up the data so that we have one dataset per conversation
 split_convs = split(conversation_df_crqa,
-                    list(conversation_df_crqa$participant_id, 
+                    list(conversation_df_crqa$participant_id,
                          conversation_df_crqa$partner_type,
                          conversation_df_crqa$task))
 
@@ -398,12 +398,12 @@ for (next_conv in split_convs){
     partner_type_str = unique(next_conv$partner_type_str)
     task = unique(next_conv$task)
     task_str = unique(next_conv$task_str)
-    
+
     # print update
     print(paste0("CRQA: Participant ", participant_id,
-                ", partner ", partner_type_str,
-                ", task ", task_str))
-    
+                 ", partner ", partner_type_str,
+                 ", task ", task_str))
+
     # run cross-recurrence
     # order time series so that they reflect actual seating in experiment
     # (left-leading = participant-leading; right-leading = partner-leading)
@@ -506,11 +506,11 @@ recurrence_df = read.table('./data/recurrence_df-pac.csv', sep=',', header=TRUE)
 
 ## Create first- and second-order polynomials
 
-In order to examine the linear and curvilinear patterns in the DRPs (cf. 
-Main, Paxton, & Dale, 2016, *Emotion*), we create orthogonal polynomials 
-for the lag term. This section creates the first- and second-order 
-othogonal polynomials that are essential to allowing us to interpret the 
-linear (i.e., first-order polynomial) and quadratic (i.e., second-order 
+In order to examine the linear and curvilinear patterns in the DRPs (cf.
+Main, Paxton, & Dale, 2016, *Emotion*), we create orthogonal polynomials
+for the lag term. This section creates the first- and second-order
+othogonal polynomials that are essential to allowing us to interpret the
+linear (i.e., first-order polynomial) and quadratic (i.e., second-order
 polynomial) patterns in the DRP independently from one another.
 
 ```{r create-polynomials, eval = FALSE}
@@ -528,13 +528,13 @@ recurrence_df = left_join(recurrence_df,lag_vals, by = c("lag" = "raw_lag"))
 ```
 
 ***
- 
+
 ## Specify precision
 
 ```{r specify-precision, eval=FALSE}
 
 recurrence_df = recurrence_df %>% ungroup() %>%
-  mutate_all(list(sprintf("%.14f",.)))
+  mutate_all(funs(sprintf("%.14f",.)))
 
 ```
 
@@ -584,9 +584,9 @@ rec_plot = rec_plot %>% ungroup() %>%
 
 ## Recurrence by lag, partner type, and task
 
-We now create a linear mixed-effects model to gauge how 
-linear lag (`ot1`) and quadratic lag (`ot2`) interact with 
-partner type (`partner_type`) and task (`task`) to 
+We now create a linear mixed-effects model to gauge how
+linear lag (`ot1`) and quadratic lag (`ot2`) interact with
+partner type (`partner_type`) and task (`task`) to
 influence overall body movement coordination (`rr`).
 
 ```{r rr-parner-task-gca-raw}
@@ -601,12 +601,12 @@ pander_lme(rr_partner_task_gca_raw)
 
 ```
 
-*** 
+***
 
 ## Exploring interaction terms
 
-In order to understand the higher-order interactions, we 
-create separate datasets for the friend and professor 
+In order to understand the higher-order interactions, we
+create separate datasets for the friend and professor
 conversations and then re-run the model as above.
 
 ### Create separate dataframes
@@ -624,9 +624,9 @@ professor_raw = rec_plot %>% ungroup() %>%
   dplyr::filter(partner_type == max(partner_type))
 
 # convert to factors
-friend_raw = friend_raw %>% ungroup() %>% 
+friend_raw = friend_raw %>% ungroup() %>%
   mutate_at(vars(one_of(factor_variables)), funs(as.factor))
-professor_raw = professor_raw %>% ungroup() %>% 
+professor_raw = professor_raw %>% ungroup() %>%
   mutate_at(vars(one_of(factor_variables)), funs(as.factor))
 
 ```
@@ -636,7 +636,7 @@ professor_raw = professor_raw %>% ungroup() %>%
 ```{r friend-model-raw}
 
 # friends: unstandardized (raw) model
-rr_friend_task_gca_raw = lmer(rr ~ ot1 * ot2 * task + 
+rr_friend_task_gca_raw = lmer(rr ~ ot1 * ot2 * task +
                                 (1 | participant_id),
                               data = friend_raw, REML = FALSE)
 pander_lme(rr_friend_task_gca_raw)
@@ -649,8 +649,8 @@ pander_lme(rr_friend_task_gca_raw)
 
 # professor: unstandardized (raw) model
 rr_prof_task_gca_raw = lmer(rr ~ ot1 * ot2 * task +
-                                (1 | participant_id),
-                              data = professor_raw, REML = FALSE)
+                              (1 | participant_id),
+                            data = professor_raw, REML = FALSE)
 pander_lme(rr_prof_task_gca_raw)
 
 ```
@@ -669,7 +669,7 @@ rec_plot = dget('./data/plotting_df-pac.csv') %>%
   mutate(lag = lag/20)
 
 # split plotting dataframe by partner type
-condition_dfs = split(rec_plot, 
+condition_dfs = split(rec_plot,
                       rec_plot$partner_type)
 friend_data = condition_dfs[[1]]
 prof_data = condition_dfs[[2]]
@@ -681,72 +681,72 @@ friend_plot = ggplot(friend_data,
                          color=as.factor(task))) +
   scale_colour_viridis(name = "Task",
                        breaks=c(1,
-                               2,
-                               3,
-                               4,
-                               5),
-                      labels=c('Convers.',
-                               'Map - Participant',
-                               'Map - Partner',
-                               'Role',
-                               'Tweety'),
-                      discrete=TRUE) +
+                                2,
+                                3,
+                                4,
+                                5),
+                       labels=c('Convers.',
+                                'Map - Participant',
+                                'Map - Partner',
+                                'Role',
+                                'Tweety'),
+                       discrete=TRUE) +
   theme(legend.position = "none") +
   stat_smooth() +
   ggtitle('Friend') +
   xlab(paste('Lag (in sec; ', downsampled_sampling_rate,' Hz)', sep="")) + ylab('Mean RR') +
-  coord_cartesian(ylim = c(0, 
+  coord_cartesian(ylim = c(0,
                            max(c(mean(friend_data$rr),mean(prof_data$rr))) + .1))
 
 # plot professor data
 prof_plot = ggplot(prof_data,
-                     aes(x=lag,
-                         y=rr,
-                         color=as.factor(task))) +
+                   aes(x=lag,
+                       y=rr,
+                       color=as.factor(task))) +
   scale_colour_viridis(name = "Task",
                        breaks=c(1,
-                               2,
-                               3,
-                               4,
-                               5),
-                      labels=c('Convers.',
-                               'Map - Participant',
-                               'Map - Partner',
-                               'Role',
-                               'Tweety'),
-                      discrete=TRUE) +
+                                2,
+                                3,
+                                4,
+                                5),
+                       labels=c('Convers.',
+                                'Map - Participant',
+                                'Map - Partner',
+                                'Role',
+                                'Tweety'),
+                       discrete=TRUE) +
   theme(legend.position = "none") +
   stat_smooth() +
   ggtitle('Professor') +
   xlab(paste('Lag (in sec; ', downsampled_sampling_rate,' Hz)', sep="")) + ylab('') +
-  coord_cartesian(ylim = c(0, 
+  coord_cartesian(ylim = c(0,
                            max(c(mean(friend_data$rr),mean(prof_data$rr))) + .1))
 
 # create another noise plot just for the legend
 friend_plot_legend = ggplot(friend_data,
-                           aes(x=lag,
-                               y=rr,
-                               color=as.factor(task))) +
+                            aes(x=lag,
+                                y=rr,
+                                color=as.factor(task))) +
   scale_colour_viridis(name = "Task",
                        breaks=c(1,
-                               2,
-                               3,
-                               4,
-                               5),
-                      labels=c('Convers.',
-                               'Map - Participant',
-                               'Map - Partner',
-                               'Role',
-                               'Tweety'),
-                      discrete=TRUE) +
+                                2,
+                                3,
+                                4,
+                                5),
+                       labels=c('Convers.',
+                                'Map - Participant',
+                                'Map - Partner',
+                                'Role',
+                                'Tweety'),
+                       discrete=TRUE) +
   ggtitle('Friend') +
   stat_smooth() +
-  coord_cartesian(ylim = c(0, 
+  coord_cartesian(ylim = c(0,
                            max(c(mean(friend_data$rr),mean(prof_data$rr))) + .1))
 
 # create a master legend
 master_legend = gtable_filter(ggplot_gtable(
-  ggplot_build(friend_plot_legend + 
+  ggplot_build(friend_plot_legend +
                  theme(legend.position="bottom"))),
   "guide-box")
 
