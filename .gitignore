@@ -1,3 +1,5 @@
-.txt
+*.txt
 data/
 .DS_Store
+slurm_output/
+*.Rhistory
