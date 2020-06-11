@@ -4,7 +4,7 @@
 # additional functions to facilitate data prep and analysis.
 #
 # Written by: A. Paxton (University of Connecticut)
-# Date last modified: 20 April 2019
+# Date last modified: 15 May 2019
 #####################################################################################
 
 #### Load necessary packages ####
@@ -25,7 +25,8 @@ required_packages = c(
   'jsonlite',
   'tidyr',
   'tibble',
-  'RCurl'
+  'RCurl',
+  'TTR'
 )
 
 # load required packages
@@ -40,10 +41,45 @@ options(digits=14)
 # function to return p-values from t-values
 pt = function(x) {return((1 - pnorm(abs(x))) * 2)}
 
-# function to identify first local minimum (modified from https://stackoverflow.com/a/6836583)
-first_local_minimum <- function(x){
-  flm = as.numeric((which(diff(sign(diff(x)))==-2)+1)[1])
-  if (is.na(flm)) { flm = as.numeric(which(diff(x)==max(diff(x))))-1 }
+# function to do a moving average from both sides of a time series (thanks to https://stackoverflow.com/a/4862334)
+ma <- function(x, n = 5){stats::filter(x, rep(1 / n, n), sides = 2)}
+
+# function to identify first local minimum (inspired by https://stackoverflow.com/a/6836583)
+first_local_minimum <- function(ts){
+  
+  # implement simple moving average and get diff
+  smoothed_ts = ma(ts, n=20)
+  minima_df = data.frame(loc = seq_along(ts)-1,
+                         ami = smoothed_ts,
+                         diff = c(NA,NA,diff(sign(diff(smoothed_ts)))))
+  
+  # identify our local minima
+  local_minima = minima_df %>%
+    dplyr::filter(diff==2) %>%
+    .$loc - 1
+  
+  # if we don't have a minimum, assign something
+  if (length(local_minima)==0){ 
+    flm = as.numeric(which(diff(ts)==max(diff(ts))))-1 
+  } else {
+    
+    # figure out how much we lose in AMI at each step
+    viable_minima = minima_df %>%
+      dplyr::filter(loc %in% local_minima) %>%
+      mutate(loss = c(0,diff(ami)),
+             loss_prop = ami/ami[1])
+    chosen_minima = viable_minima %>%
+      dplyr::filter(loss_prop < .2 |
+                      loss_prop==1)
+
+    if (dim(chosen_minima)[1] >= 2){
+      flm = chosen_minima %>%
+        dplyr::filter(ami == min(ami)) %>%
+        .$loc
+    } else {
+      flm = viable_minima$loc[1]
+    }
+  }
   return(flm)
 }
 
