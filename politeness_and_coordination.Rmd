@@ -78,10 +78,6 @@ and concatenate all conversations' movement data into a single file.
 conversation_files = list.files('./data/movement_dataframes-aggregated',
                                 full.names = TRUE)
 
-# specify Butterworth filters
-anti_aliasing_butter = signal::butter(4,.4)
-post_downsample_butter = signal::butter(2,.02)
-
 # process each file
 conversation_df = data.frame()
 for (conversation_file in conversation_files){
@@ -98,10 +94,17 @@ for (conversation_file in conversation_files){
                               'partner_type',
                               'task',
                               'condition'), sep='_') %>%
-      
+
       # remove .mov extension from condition
-      mutate(condition = sub(pattern = "(.*?)\\..*$", replacement = "\\1", condition)) 
-    
+      mutate(condition = sub(pattern = "(.*?)\\..*$",
+                             replacement = "\\1",
+                             condition))  %>%
+
+      # delineate movement between target participant (1 / L) and partner (0 / R)
+      mutate(participant = ifelse(participant=='left',
+                                  1,
+                                  0))
+
   } else {
     next_conversation = next_conversation %>% ungroup() %>%
       separate(dyad, into = c('participant_id',
@@ -110,49 +113,56 @@ for (conversation_file in conversation_files){
                               'task',
                               'condition',
                               'map_cond'), sep='_') %>%
-      
+
       # fix the task information to include who led (participant vs. interlocutor)
       unite(task, c('task','map_cond')) %>%
-      mutate(task = sub(pattern = "(.*?)\\..*$", replacement = "\\1", task)) 
+      mutate(task = sub(pattern = "(.*?)\\..*$",
+                        replacement = "\\1",
+                        task)) %>%
+
+      # delineate movement between target participant (1 / L) and partner (0 / R)
+      mutate(participant = ifelse(participant=='left',
+                                  1,
+                                  0))
   }
-  
-  # movement processing
-  next_conversation = next_conversation %>% ungroup() %>%
-    
-    # delineate movement between target participant (1 / L) and partner (0 / R)
-    mutate(participant = ifelse(participant=='left',
-                                1,
-                                0)) %>%
-    
-    # create a time variable from the difference number
-    mutate(t = difference_number / raw_sampling_rate) %>%
-    
-    # filter and downsample
-    dplyr::group_by(participant, partner_type, task, condition) %>%
-    mutate(movement = signal::filtfilt(anti_aliasing_butter, movement)) %>%
-    mutate(t = floor(t * downsampled_sampling_rate) / downsampled_sampling_rate) %>%
-    ungroup() %>%
-    dplyr::group_by(participant, partner_type, task, condition, t) %>%
-    mutate(movement = mean(movement)) %>%
-    slice(1) %>%
-    ungroup() %>%
-    dplyr::group_by(participant) %>%
-    mutate(movement = signal::filtfilt(post_downsample_butter, movement)) %>%
-    ungroup() %>%
-    
-    # drop unneeded variable and rename participant
-    select(-difference_number) %>%
-    dplyr::rename(interlocutor = participant) %>% 
-    
-    # trim the beginning and end from each conversation (instructions and wrap-up time)
-    dplyr::group_by(participant_id, interlocutor) %>%
-    filter(t > trimmed_time) %>%
-    filter(t < (max(t) - trimmed_time)) %>%
-    arrange(t) %>%
-    ungroup()
-  
+
+  # decimate movement
+  conversations_split = split(next_conversation,
+                              next_conversation$participant)
+  decimated_df = data.frame()
+  for (next_ts in conversations_split){
+
+    # decimate the signal
+    next_ts = dplyr::arrange(next_ts, difference_number)
+    movement = signal::decimate(x = next_ts$movement, q = 3)
+
+    # reconstitute the dataframe
+    next_ts = data.frame(next_ts) %>% ungroup() %>%
+
+      # grab only the top-line data we need and remove old movement variable
+      slice(1) %>%
+      select(-difference_number,
+             -movement) %>%
+
+      # add the decimated movement and create time variable
+      cbind(., movement) %>%
+      rownames_to_column(var="frame") %>%
+      mutate(t = as.numeric(frame) / 10) %>%
+
+      # trim the beginning and end (instructions and wrap-up time)
+      dplyr::filter(t > trimmed_time,
+                    t < (max(t) - trimmed_time)) %>%
+
+      # rename participant
+      dplyr::rename(interlocutor = participant)
+
+    # add to shell
+    decimated_df = rbind.data.frame(decimated_df,
+                                    next_ts)
+  }
+
   # save plot of movement with beginning and end trimmed
-  trimmed_movement_plot = ggplot(next_conversation,
+  trimmed_movement_plot = ggplot(decimated_df,
                                  aes(x = t,
                                      y = movement,
                                      color = as.factor(interlocutor))) +
@@ -164,10 +174,10 @@ for (conversation_file in conversation_files){
          width = 3,
          filename = paste0('./figures/movement-trimmed/pac-trimmed_movement-',
                            basename(conversation_file),'.jpg'))
-  
+
   # append dataframe to group files
-  conversation_df = rbind.data.frame(conversation_df, 
-                                     next_conversation)
+  conversation_df = rbind.data.frame(conversation_df,
+                                     decimated_df)
 }
 
 # save aggregated file
