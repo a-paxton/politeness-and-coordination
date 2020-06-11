@@ -39,7 +39,7 @@ radius_grid_search = expand.grid(radius.list,
 
 # save to file
 write.table(x = radius_grid_search,
-            file="./data/crqa_parameters/crqa_radius_parameters.csv",
+            file="./data/crqa_parameters/crqa_radius_search.csv",
             sep=',',
             col.names=TRUE,
             row.names=FALSE)
