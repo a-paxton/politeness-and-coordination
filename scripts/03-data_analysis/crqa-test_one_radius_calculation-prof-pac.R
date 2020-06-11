@@ -12,7 +12,7 @@ n = as.numeric(Sys.getenv('SLURM_ARRAY_TASK_ID'))
 # figure out which job we're running
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) != 1)
-    stop("Missing argument for job_number")
+  stop("Missing argument for job_number")
 n <- as.integer(args[1])
 print(paste0('Job number: ', n))
 
@@ -25,9 +25,9 @@ message("Output CSV file: ", csv_output)
 
 # load libraries (quietly)
 suppressPackageStartupMessages({
-library(crqa)
-library(dplyr)
-library(tidyverse)
+  library(crqa)
+  library(dplyr)
+  library(tidyverse)
 })
 
 # set seed
@@ -70,7 +70,7 @@ conversation_df = conversation_df %>% ungroup() %>%
 
 # choose radius input parameters for calculations
 param <- suppressMessages(read_csv("./data/crqa_parameters/crqa_radius_search.csv")) %>%
-      dplyr::filter(job_number == n)
+  dplyr::filter(job_number == n)
 
 # figure out current parameters
 chosen_radius = param$radius
@@ -93,16 +93,16 @@ next.conv = conversation_df %>% ungroup() %>%
 # quit if we couldn't identify an appropriate lag
 if (unique(next.conv$embed.selected)[1] == NA){
   print(paste0("No suitable embedding dimension identified."))
-
+  
 } else {
-
+  
   # identify parameters
   chosen_delay = as.numeric(unique(next.conv$ami.selected))
   chosen_embed = as.numeric(unique(next.conv$embed.selected))
   print(paste0('Chosen delay: ', chosen_delay))
   print(paste0('Chosen embedding dimension: ', chosen_embed))
   print(paste0('Chosen radius: ', chosen_radius))
-
+  
   # run CRQA
   rec_analysis = crqa(next.conv$rescale.movement_0,
                       next.conv$rescale.movement_1,
@@ -116,26 +116,26 @@ if (unique(next.conv$embed.selected)[1] == NA){
                       tw = 0,
                       whiteline = FALSE,
                       recpt = FALSE)
-
+  
   # grab metrics
   rr = round(rec_analysis$RR, 5)
   from_target = abs(rr - 5)
   print(paste0("Distance from RR target: ",from_target))
-
-# create a new dataframe for output
- result_df <- cbind.data.frame(job_number = n,
- 	                    current_participant,
-                               current_task,
-                               current_partner,
-                               chosen_delay,
-                               chosen_embed,
-                               chosen_radius,
-                               rr,
-                               from_target)
-
+  
+  # create a new dataframe for output
+  result_df <- cbind.data.frame(job_number = n,
+                                current_participant,
+                                current_task,
+                                current_partner,
+                                chosen_delay,
+                                chosen_embed,
+                                chosen_radius,
+                                rr,
+                                from_target)
+  
   # save the entire session
   save.image(file = file_output)
-
+  
   # save the result dataframe
   write.table(x = result_df,
               file=csv_output,
