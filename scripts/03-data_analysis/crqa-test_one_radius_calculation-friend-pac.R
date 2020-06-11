@@ -7,15 +7,24 @@
 
 # grab the environment variables passed from sbatch
 n =as.numeric(Sys.getenv('SLURM_ARRAY_TASK_ID'))
-search_start_value = as.numeric(Sys.getenv('search_start_value'))
-search_end_value = as.numeric(Sys.getenv('search_end_value'))
-print(paste0('Search start value:', search_start_value))
-print(paste0('Search end value:', search_end_value))
+
+args <- commandArgs(trailingOnly = TRUE)
+if (length(args) != 1)
+    stop("Missing argument for job_number")
+n <- as.integer(args[1])
+print(paste0('Job number:', n))
+
+dir_output <- Sys.getenv("SCRATCH_DIR", unset = NA)
+dir_output <- ifelse(is.na(dir_output), ".", dir_output)
+file_output <- file.path(dir_output, paste0(n, ".RData"))
+message("Output file: ", file_output)
 
 # load libraries
+suppressPackageStartupMessages({
 library(crqa)
 library(dplyr)
 library(tidyverse)
+})
 
 # set seed
 set.seed(999)
@@ -39,9 +48,7 @@ fnn.merged = read.table('./data/crqa_parameters/fnn_calculations-pac.csv',
 conversation_df = full_join(conversation_df, amis,
                             by=c('participant_id',
                                  'partner_type',
-                                 'task',
-                                 'condition',
-                                 'participant_gender')) %>%
+                                 'task')) %>%
   full_join(., fnn.merged,
             by=c('participant_id',
                  'partner_type',
@@ -57,21 +64,14 @@ conversation_df_crqa = conversation_df %>% ungroup() %>%
          rescale.movement_1 = scale(movement_1)) %>%
   ungroup()
 
-# identify radius for calculations
-radius.list = seq(search_start_value,
-                  search_end_value,
-                  by=.1)
-
-# create a grid
-radius_grid_search = expand.grid(radius.list,
-                                 unique(conversation_df_crqa$participant_id),
-                                 unique(conversation_df$task))
+# choose radius input parameters for calculations
+param <- suppressMessages(read_csv("./scripts/03-data_analysis/crqa_radius_parameters.csv")) %>%
+      dplyr::filter(job_number == n)
 
 # figure out current parameters
-current_test = radius_grid_search[n,]
-chosen_radius = as.numeric(current_test$Var1)
-current_participant = current_test$Var2
-current_task = current_test$Var3
+chosen_radius = param$radius
+current_participant = param$participant_id
+current_task = param$task
 current_partner = "Friend"
 
 # print updates
@@ -118,22 +118,17 @@ if (unique(next.conv$embed.selected)[1] == 'Inf'){
   from_target = abs(rr - 5)
   print(paste0("Distance from RR target: ",from_target))
 
-  # save metrics to file
-  write.table(cbind.data.frame(current_participant,
+ result <- cbind.data.frame(job_number = n,
+ 	                    current_participant,
                                current_task,
                                current_partner,
                                chosen_delay,
                                chosen_embed,
                                chosen_radius,
                                rr,
-                               from_target),
-              paste('./data/crqa_parameters/radius_calculations/radius_calculations-mean_scaled-',
-                    current_participant,'_',
-                    current_task, '_',
-                    current_partner, '-r',
-                    chosen_radius,
-                    '-pac.csv', sep=''),
-              sep=',',row.names=FALSE,col.names=TRUE)
+                               from_target)
+  # Save the entire session.
+  save.image(file = file_output)
 }
 
 # print space
