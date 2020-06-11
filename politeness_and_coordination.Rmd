@@ -51,8 +51,11 @@ packages, and specifies important global variables.
 # clear our workspace
 rm(list=ls())
 
-# # if needed, uncomment this to install libraries
-# source('./scripts/03-data_analysis/required_packages-pac.r')
+# turn on caching
+knitr::opts_chunk$set(cache=TRUE, autodep=TRUE, cache.lazy=FALSE)
+
+# if needed, uncomment this to install libraries
+source('./scripts/03-data_analysis/required_packages-pac.r')
 
 # read in libraries and create functions
 source('./scripts/03-data_analysis/libraries_and_functions-pac.r')
@@ -69,7 +72,7 @@ research on movement coordination; cf. Paxton & Dale, 2013, *Behavior Research M
 We then remove the first and last few seconds of the data from each conversation
 and concatenate all conversations' movement data into a single file.
 
-```{r preprocess-concatenate-data, warning = FALSE, error = FALSE, message = FALSE, eval = FALSE}
+```{r preprocess-concatenate-data, warning = FALSE, error = FALSE, message = FALSE, eval = TRUE}
 
 # get list of individual conversations included in the data
 conversation_files = list.files('./data/movement_dataframes-aggregated',
@@ -210,7 +213,7 @@ print(summary_duration)
 
 ```
 
-```{r plot-conversation-summary-stats, echo=FALSE, warning = FALSE, error = FALSE, message = FALSE, eval = FALSE}
+```{r plot-conversation-summary-stats, echo=FALSE, warning = FALSE, error = FALSE, message = FALSE, eval = TRUE}
 
 # separate by different tasks
 map_p_summary_df = filter(summary_stats, task=="Map_I")
@@ -270,7 +273,7 @@ to be re-calculated.
 
 This section clears the workspace and reads in the prepared data files.
 
-```{r recurrence-prelims, warning = FALSE, error = FALSE, message = FALSE, eval = FALSE}
+```{r recurrence-prelims, warning = FALSE, error = FALSE, message = FALSE, eval = TRUE}
 
 # clear our workspace
 rm(list=ls())
@@ -280,7 +283,7 @@ source('./scripts/03-data_analysis/libraries_and_functions-pac.r')
 
 # read in data
 conversation_df = read.table('./data/pac-filtered_movement_data.csv',
-                            sep=',',header=TRUE) 
+                             sep=',',header=TRUE)
 
 ```
 
@@ -293,7 +296,7 @@ for continuous CRQA for the dataset. We identify parameters that provide a
 steady *rate of recurrence* or *RR* of approximately 5% for each conversation 
 and save these parameters to a CSV file.
 
-```{r crqa-parameters, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE, eval = FALSE}
+```{r crqa-parameters, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE, eval = TRUE}
 
 # run CRQA parameters
 source('./scripts/03-data_analysis/continuous_rqa_parameters-pac.r')
@@ -304,7 +307,7 @@ source('./scripts/03-data_analysis/continuous_rqa_parameters-pac.r')
 
 ## Prepare for CRQA and DRPs
 
-```{r ready-for-crqa-drps, eval = FALSE}
+```{r ready-for-crqa-drps, eval = TRUE}
 
 # read in our crqa parameters
 conversation_df_crqa = read.table('./data/crqa_data_and_parameters-pac.csv',
@@ -369,7 +372,7 @@ taken: Participant-leading dynamics will be reflected in the left half of the
 plot, and partner-leading dynamics will be reflected in the right half of the
 plot.
 
-```{r run-crqa-using-parameters, eval = FALSE}
+```{r run-crqa-using-parameters, eval = TRUE}
 
 # identify window size
 target_seconds = 5
@@ -458,7 +461,7 @@ write.table(drp_results,'./data/drp_results-pac.csv',sep=',')
 
 ## Export merged recurrence dataset
 
-```{r merge-recurrence-datasets, eval = FALSE}
+```{r merge-recurrence-datasets, eval = TRUE}
 
 # merge CRQA and DRP analysis results
 recurrence_results = full_join(drp_results, crqa_results,
@@ -489,7 +492,7 @@ are currently set to `eval=FALSE`. Bear this in mind if these data need to be re
 
 This section clears the workspace and reads in the prepared data files.
 
-```{r prep-data-prep, warning=FALSE, error=FALSE, message=FALSE, eval = FALSE}
+```{r prep-data-prep, warning=FALSE, error=FALSE, message=FALSE, eval = TRUE}
 
 # clear our workspace
 rm(list=ls())
@@ -513,7 +516,7 @@ othogonal polynomials that are essential to allowing us to interpret the
 linear (i.e., first-order polynomial) and quadratic (i.e., second-order
 polynomial) patterns in the DRP independently from one another.
 
-```{r create-polynomials, eval = FALSE}
+```{r create-polynomials, eval = TRUE}
 
 # create first- and second-order orthogonal polynomials for lag
 raw_lag = min(recurrence_df$lag):max(recurrence_df$lag)
@@ -542,7 +545,7 @@ recurrence_df = recurrence_df %>% ungroup() %>%
 
 ## Export dataframe
 
-```{r export-dataframe, eval = FALSE}
+```{r export-dataframe, eval = TRUE}
 
 # export dataframe
 dput(recurrence_df, './data/plotting_df-pac.csv')
@@ -661,7 +664,7 @@ pander_lme(rr_prof_task_gca_raw)
 
 ***
 
-```{r plot-three-way-interaction, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE, eval = FALSE}
+```{r plot-three-way-interaction, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE, eval = TRUE}
 
 # read in the raw datasets
 rec_plot = dget('./data/plotting_df-pac.csv') %>%
