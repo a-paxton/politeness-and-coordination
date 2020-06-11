@@ -1,21 +1,34 @@
 #! /usr/bin/env Rscript
 
-##### Parallelizing RQA radius search: Professor partner #####
+##### Parallelizing RQA radius search: "Prof" partner #####
 
-# With thanks to https://github.com/FredHutch/slurm-examples/blob/master/centipede/example.R
-# and https://sph.umich.edu/biostat/computing/cluster/examples/r.html.
+# With thanks to https://github.com/FredHutch/slurm-examples/blob/master/centipede/example.R,
+# https://sph.umich.edu/biostat/computing/cluster/examples/r.html,
+# and Pariksheet Nanda (University of Connecticut).
 
 # grab the environment variables passed from sbatch
-n =as.numeric(Sys.getenv('SLURM_ARRAY_TASK_ID'))
-search_start_value = as.numeric(Sys.getenv('search_start_value'))
-search_end_value = as.numeric(Sys.getenv('search_end_value'))
-print(paste0('Search start value:', search_start_value))
-print(paste0('Search end value:', search_end_value))
+n = as.numeric(Sys.getenv('SLURM_ARRAY_TASK_ID'))
 
-# load libraries
+# figure out which job we're running
+args <- commandArgs(trailingOnly = TRUE)
+if (length(args) != 1)
+    stop("Missing argument for job_number")
+n <- as.integer(args[1])
+print(paste0('Job number: ', n))
+
+# create new output directory
+dir_output <- Sys.getenv("OUTPUT_DIR", unset = NA)
+dir_output <- ifelse(is.na(dir_output), ".", dir_output)
+Rdata_output <- file.path(dir_output, paste0(n, ".RData"))
+csv_output <- file.path(dir_output, paste0(n, ".RData"))
+message("Output CSV file: ", csv_output)
+
+# load libraries (quietly)
+suppressPackageStartupMessages({
 library(crqa)
 library(dplyr)
 library(tidyverse)
+})
 
 # set seed
 set.seed(999)
@@ -39,9 +52,7 @@ fnn.merged = read.table('./data/crqa_parameters/fnn_calculations-pac.csv',
 conversation_df = full_join(conversation_df, amis,
                             by=c('participant_id',
                                  'partner_type',
-                                 'task',
-                                 'condition',
-                                 'participant_gender')) %>%
+                                 'task')) %>%
   full_join(., fnn.merged,
             by=c('participant_id',
                  'partner_type',
@@ -49,7 +60,7 @@ conversation_df = full_join(conversation_df, amis,
   select(-ami.loc0, -ami.loc1, -embed.0, -embed.1)
 
 # rescale movement time series
-conversation_df_crqa = conversation_df %>% ungroup() %>%
+conversation_df = conversation_df %>% ungroup() %>%
   dplyr::select(participant_id, task, partner_type,
                 movement_0, movement_1, ami.selected, embed.selected) %>%
   group_by(participant_id, task, partner_type) %>%
@@ -57,37 +68,30 @@ conversation_df_crqa = conversation_df %>% ungroup() %>%
          rescale.movement_1 = scale(movement_1)) %>%
   ungroup()
 
-# identify radius for calculations
-radius.list = seq(search_start_value,
-                  search_end_value,
-                  by=.1)
-
-# create a grid
-radius_grid_search = expand.grid(radius.list,
-                                 unique(conversation_df_crqa$participant_id),
-                                 unique(conversation_df$task))
+# choose radius input parameters for calculations
+param <- suppressMessages(read_csv("./data/crqa_parameters/crqa_radius_search.csv")) %>%
+      dplyr::filter(job_number == n)
 
 # figure out current parameters
-current_test = radius_grid_search[n,]
-chosen_radius = as.numeric(current_test$Var1)
-current_participant = current_test$Var2
-current_task = current_test$Var3
+chosen_radius = param$radius
+current_participant = param$participant_id
+current_task = param$task
 current_partner = "Prof"
 
 # print updates
 print(paste0("Running: ",
              "Participant ", current_participant, ", ",
-             "Prof, ",
+             "Partner Prof, ",
              "Task ", current_task))
 
 # cull the dataframe to the current set
-next.conv = conversation_df_crqa %>% ungroup() %>%
+next.conv = conversation_df %>% ungroup() %>%
   dplyr::filter(participant_id == current_participant &
                   task == current_task &
                   partner_type == current_partner)
 
 # quit if we couldn't identify an appropriate lag
-if (unique(next.conv$embed.selected)[1] == 'Inf'){
+if (unique(next.conv$embed.selected)[1] == NA){
   print(paste0("No suitable embedding dimension identified."))
 
 } else {
@@ -118,22 +122,26 @@ if (unique(next.conv$embed.selected)[1] == 'Inf'){
   from_target = abs(rr - 5)
   print(paste0("Distance from RR target: ",from_target))
 
-  # save metrics to file
-  write.table(cbind.data.frame(current_participant,
+# create a new dataframe for output
+ result_df <- cbind.data.frame(job_number = n,
+ 	                    current_participant,
                                current_task,
                                current_partner,
                                chosen_delay,
                                chosen_embed,
                                chosen_radius,
                                rr,
-                               from_target),
-              paste('./data/crqa_parameters/radius_calculations/radius_calculations-mean_scaled-',
-                    current_participant,'_',
-                    current_task, '_',
-                    current_partner, '-r',
-                    chosen_radius,
-                    '-pac.csv', sep=''),
-              sep=',',row.names=FALSE,col.names=TRUE)
+                               from_target)
+
+  # save the entire session
+  save.image(file = file_output)
+
+  # save the result dataframe
+  write.table(x = result_df,
+              file=csv_output,
+              sep=',',
+              col.names=TRUE,
+              row.names=FALSE)
 }
 
 # print space
