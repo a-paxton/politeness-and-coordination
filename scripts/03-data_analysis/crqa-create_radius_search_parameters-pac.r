@@ -1,7 +1,8 @@
 #### crqa-create_radius_search_parameters-pac.r: Part of `politeness_and_coordination.Rmd` ####
 #
 # This script sets the parameters for our radius search for cross-recurrence
-# quantification analysis.
+# quantification analysis. It removes any segments for which we were unable to
+# identify suitable parameters.
 #
 # Written by: A. Paxton (University of Connecticut)
 # Date last modified: 11 June 2020
@@ -34,8 +35,7 @@ radius_grid_search = expand.grid(radius.list,
   rename(radius = Var1,
          participant_id = Var2,
          task = Var3,
-         partner_type = Var4) %>%
-  rownames_to_column(var = "job_number")
+         partner_type = Var4)
 
 #### 3. Combine with other parameters ####
 
@@ -76,11 +76,13 @@ radii_and_parameter_df = full_join(radius_grid_search,
 
 # create friend file
 friend_search_df = radii_and_parameter_df %>% ungroup() %>%
-  dplyr::filter(partner_type == "Friend")
+  dplyr::filter(partner_type == "Friend") %>%
+  rownames_to_column(var = "job_number")
 
 # create prof file
 prof_search_df = radii_and_parameter_df %>% ungroup() %>%
-  dplyr::filter(partner_type == "Prof")
+  dplyr::filter(partner_type == "Prof") %>%
+  rownames_to_column(var = "job_number")
 
 # save friend to file
 write.table(x = friend_search_df,
