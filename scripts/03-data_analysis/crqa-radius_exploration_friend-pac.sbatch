@@ -5,7 +5,7 @@
 #SBATCH --partition general_requeue
 #SBATCH --ntasks=192    # Since we're parallelizing, set to maximum permitted cores
 #SBATCH --dependency=singleton
-#-SBATCH --time=1:00    # Don't let it run forever.
+#-SBATCH --time=5:00    # Don't let it run forever.
 
 # overwrite output file
 echo -n > $HOME/politeness_and_coordination/slurm_output/parallel_test-radius_exploration-friend.out
