@@ -8,7 +8,7 @@
 #-SBATCH --time=1:00    # Don't let it run forever.
 
 # overwrite output file
-echo -n > slurm_output/parallel_test-radius_exploration-friend.out
+echo -n > $HOME/politeness_and_coordination/slurm_output/parallel_test-radius_exploration-friend.out
 
 # create per-job scratch directory
 OUTPUT_DIR=$HOME/politeness_and_coordination/data/crqa_parameters/radius_exploration/$SLURM_JOB_NAME
@@ -27,7 +27,7 @@ module load parallel
 echo $SLURM_ARRAY_TASK_ID ": Running SLURM task"
 
 # identify the number of tests to run
-lines=$(wc -l scripts/03-data_analysis/*.csv | cut -f1 -d ' ')
+lines=$(wc -l data/crqa_parameters/crqa-radius_search-friend.csv | cut -f1 -d ' ')
 lines=$(( lines - 1 ))
 job_numbers=slurm_output/job_numbers.txt
 seq 1 $lines > $job_numbers
@@ -41,9 +41,6 @@ parallel \
     --line-buffer \
     Rscript $HOME/politeness_and_coordination/scripts/03-data_analysis/crqa-test_one_radius_calculation-friend-pac.R \
     :::: $job_numbers
-
-# run the "prof" R script
-#Rscript $HOME/politeness_and_coordination/scripts/03-data_analysis/crqa-test_one_radius_calculation-prof-pac.R
 
 # print to output for confirmation that it's ended
 echo $SLURM_ARRAY_TASK_ID ": Job done"
