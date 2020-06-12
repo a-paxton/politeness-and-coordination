@@ -29,7 +29,7 @@ echo $SLURM_ARRAY_TASK_ID ": Running SLURM task"
 # identify the number of tests to run
 lines=$(wc -l data/crqa_parameters/crqa-radius_search-prof.csv | cut -f1 -d ' ')
 lines=$(( lines - 1 ))
-job_numbers=slurm_output/job_numbers.txt
+job_numbers=slurm_output/job_numbers_prof.txt
 seq 1 $lines > $job_numbers
 
 # run "prof" script
