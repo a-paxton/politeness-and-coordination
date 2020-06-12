@@ -70,19 +70,22 @@ radii_and_parameter_df = full_join(radius_grid_search,
                                    parameter_df,
                                    by=c('participant_id',
                                         'partner_type',
-                                        'task'))
+                                        'task')) %>%
+  
+  # number separate partner types
+  group_by(partner_type) %>%
+  mutate(job_number = row_number()) %>%
+  ungroup()
 
 #### 4. Save separate partners to file ####
 
 # create friend file
 friend_search_df = radii_and_parameter_df %>% ungroup() %>%
-  dplyr::filter(partner_type == "Friend") %>%
-  rownames_to_column(var = "job_number")
+  dplyr::filter(partner_type == "Friend")
 
 # create prof file
 prof_search_df = radii_and_parameter_df %>% ungroup() %>%
-  dplyr::filter(partner_type == "Prof") %>%
-  rownames_to_column(var = "job_number")
+  dplyr::filter(partner_type == "Prof")
 
 # save friend to file
 write.table(x = friend_search_df,
