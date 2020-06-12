@@ -20,7 +20,7 @@ print(paste0('Job number: ', n))
 dir_output <- Sys.getenv("OUTPUT_DIR", unset = NA)
 dir_output <- ifelse(is.na(dir_output), ".", dir_output)
 Rdata_output <- file.path(dir_output, paste0(n, ".RData"))
-csv_output <- file.path(dir_output, paste0(n, ".RData"))
+csv_output <- file.path(dir_output, paste0(n, ".csv"))
 message("Output CSV file: ", csv_output)
 
 # load libraries (quietly)
@@ -36,12 +36,12 @@ set.seed(999)
 # read in raw dataset
 conversation_df = read.table('./data/pac-filtered_movement_data.csv',
                              sep=',',header=TRUE) %>%
-  
+
   # spread data to wide form
   tidyr::spread(interlocutor, movement) %>%
   rename(movement_0 = '0',
          movement_1 = '1') %>%
-  
+
   # rescale movement time series
   dplyr::select(participant_id, task, partner_type,
                 movement_0, movement_1) %>%
@@ -54,7 +54,7 @@ conversation_df = read.table('./data/pac-filtered_movement_data.csv',
 friend_search_df = suppressMessages(
   read_csv('./data/crqa_parameters/crqa-radius_search-friend.csv')
 ) %>%
-  
+
   # filter to this job's target parameters
   dplyr::filter(job_number == n)
 
@@ -112,7 +112,7 @@ result_df <- cbind.data.frame(job_number = n,
                               from_target)
 
 # save the entire session
-save.image(file = file_output)
+save.image(file = Rdata_output)
 
 # save the result dataframe
 write.table(x = result_df,
