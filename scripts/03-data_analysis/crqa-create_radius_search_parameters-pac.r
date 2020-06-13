@@ -25,7 +25,7 @@ conversation_df = read.table('./data/pac-filtered_movement_data.csv',
 #### 2. Create radius list ####
 
 # specify the radii that we'll check
-radius.list = seq(.01, 22, .01)
+radius.list = seq(.01, 25, .01)
 
 # create parameter search
 radius_grid_search = expand.grid(radius.list,
@@ -54,14 +54,14 @@ parameter_df = full_join(conversation_df, delay_df,
             by=c('participant_id',
                  'partner_type',
                  'task')) %>%
-  
+
   # only take parameters for each
-  select(-ami.loc0, -ami.loc1, 
+  select(-ami.loc0, -ami.loc1,
          -embed.0, -embed.1,
          -frame, -t, -movement, -condition,
          -interlocutor, -participant_gender) %>%
   distinct() %>%
-  
+
   # remove anyone who doesn't have a dimension
   drop_na(embed.selected)
 
@@ -71,7 +71,7 @@ radii_and_parameter_df = full_join(radius_grid_search,
                                    by=c('participant_id',
                                         'partner_type',
                                         'task')) %>%
-  
+
   # number separate partner types
   group_by(partner_type) %>%
   mutate(job_number = row_number()) %>%
