@@ -51,7 +51,69 @@ selected_radii = radius_dt[selected_radii,
                                   from_target),
                            mult = "first"]
 
-#### 6. Export chosen radii for all conversations ####
+#### 3. Figure out if we need to keep searching ####
+
+# identify who's beyond our tolerance
+recheck_radii_df = data.frame(selected_radii) %>%
+  dplyr::filter(from_target >= 1)
+
+# specify the radii that we'll check
+old_maximum = max(selected_radii$chosen_radius)
+radius_list = seq(old_maximum+.01, old_maximum+3, .01)
+radius_recheck_search = expand.grid(radius_list,
+                                 unique(recheck_radii_df$current_participant)) %>%
+
+  # convert to dataframe and rename variables
+  #data.frame(.) %>%
+  rename(radius = Var1,
+         current_participant = Var2) %>%
+
+  # combine to winnow to only the ones we need
+  left_join(recheck_radii_df, radius_grid_search,
+            by = c('current_participant')) %>%
+  select(-job_number) %>%
+
+  # update job job_numbers
+  group_by(current_partner) %>%
+  mutate(job_number = row_number() + max(radius_dt$job_number)) %>%
+  ungroup() %>%
+
+  # rename variables so that the sbatch code doesn't throw errors
+  rename(participant_id = current_participant,
+         partner_type = current_partner,
+         task = current_task,
+         ami.selected = chosen_delay,
+         embed.selected = chosen_embed) %>%
+
+  # order variables according to append
+  dplyr::select(radius, participant_id, task, partner_type,
+               ami.selected, embed.selected, job_number)
+
+# create friend df
+friend_search_df = radius_recheck_search %>% ungroup() %>%
+  dplyr::filter(partner_type == "Friend")
+
+# create prof df
+prof_search_df = radius_recheck_search %>% ungroup() %>%
+  dplyr::filter(partner_type == "Prof")
+
+# save friend to file
+write.table(x = friend_search_df,
+            file="./data/crqa_parameters/crqa-radius_search-friend.csv",
+            sep=',',
+            col.names=FALSE,
+            row.names=FALSE,
+            append=TRUE)
+
+# save prof to file
+write.table(x = prof_search_df,
+            file="./data/crqa_parameters/crqa-radius_search-prof.csv",
+            sep=',',
+            col.names=FALSE,
+            row.names=FALSE,
+            append=TRUE)
+
+#### 4. Export chosen radii for all conversations ####
 
 # save to files
 write.table(selected_radii,
