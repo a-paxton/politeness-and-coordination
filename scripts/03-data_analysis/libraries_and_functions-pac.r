@@ -49,8 +49,7 @@ pt = function(x) {return((1 - pnorm(abs(x))) * 2)}
 parallel_wavelets <- function(dfs, directory) {
   
   # cycle through each subset
-  foreach(
-    i = seq_along(dfs)) %dopar% {
+  foreach(i = seq_along(dfs), .errorhandling='remove') %dopar% {
       
       # grab the next dataframe
       df <- dfs[[i]]
