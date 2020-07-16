@@ -141,8 +141,8 @@ for (conversation_file in conversation_files){
 
       # grab only the top-line data we need and remove old movement variable
       slice(1) %>%
-      select(-difference_number,
-             -movement) %>%
+      dplyr::select(-difference_number,
+                    -movement) %>%
 
       # add the decimated movement and create time variable
       cbind(., movement) %>%
@@ -338,14 +338,12 @@ split_convs = split(conversation_df,
 
 ```
 
-***
-
 ## Parallelized wavelet coherence analyses
 
 We have a large number of individual interactions to analyze. As a result, we
 will take advantage of R's ability to facilitate *parallelization*, or
 splitting activity across multiple cores so that we can run the code faster.
-Because each interaction can be analyze independently, we have the opportunity
+Because each interaction can be analyzed independently, we have the opportunity
 to run each interaction's analysis in parallel rather than in sequence.
 
 **NOTE**: If you are unfamiliar with parallelization, *proceed with caution*. 
@@ -353,7 +351,7 @@ For more reading, check out
 [this guide to parallelism in R by Florian Prive](https://privefl.github.io/blog/a-guide-to-parallelism-in-r/)
 and [this chapter in *R programming for data science*](https://bookdown.org/rdpeng/rprogdatascience/parallel-computation.html).
 
-```{r wavelet-prep-for-parallel}
+```{r wavelet-parallelization}
 
 # identify number of cores available
 available_cores = detectCores() - 1
