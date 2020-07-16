@@ -361,7 +361,7 @@ pseudo_cluster = parallel::makeCluster(available_cores,
                                        setup_strategy="sequential")
 
 # create a directory for our output, if we don't have one yet
-dir.create("./data/wavelet",
+dir.create("./data/wavelet_results",
            showWarnings = TRUE,
            recursive = TRUE)
 
