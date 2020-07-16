@@ -1,6 +1,6 @@
 *.txt
 data/
-.DS_Store
+*.DS_Store
 slurm_output/
 *.Rhistory
 archive/
