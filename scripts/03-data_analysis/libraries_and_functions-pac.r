@@ -85,8 +85,8 @@ parallel_wavelets <- function(dfs) {
                              sep=",")
         }
         
-        # return the biwavelet object
-        return(coherence_wavelet)
+        # clear the biwavelet object to save some space
+        rm(coherence_wavelet)
       }}
 }
 
