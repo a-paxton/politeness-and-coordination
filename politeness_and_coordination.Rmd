@@ -367,7 +367,7 @@ dir.create("./data/wavelet",
 
 # parallelize our wavelet analyses
 doParallel::registerDoParallel(pseudo_cluster)
-x = parallel_wavelets(subset_split)
+x = parallel_wavelets(split_convs)
 
 # stop the pseudocluster
 stopCluster(pseudo_cluster)
