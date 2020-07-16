@@ -47,44 +47,47 @@ pt = function(x) {return((1 - pnorm(abs(x))) * 2)}
 
 # create a function to be applied over a `split` df
 parallel_wavelets <- function(dfs) {
-
+  
   # cycle through each subset
   foreach(
     i = seq_along(dfs)) %dopar% {
-
+      
       # grab the next dataframe
       df <- dfs[[i]]
       
-      # figure out the information for the dyad
-      this_participant = unique(df$participant_id)
-      this_partner_type = unique(df$partner_type_str)
-      this_task = unique(df$task_str)
-
-      # set up for analyses
-      person_0 = dplyr::select(df,
-                               t, movement_0)
-      person_1 = dplyr::select(df,
-                               t, movement_1)
-
-      # calculate coherence
-      coherence_wavelet = biwavelet::wtc(person_0,
-                                         person_1,
-                                         sig.level = .95)
-
-      # print each list to a separate file
-      for (next_list in names(coherence_wavelet)){
-        MASS::write.matrix(x = coherence_wavelet[[next_list]],
-                           file=paste0('./data/wavelet/',
-                                       'participant_', this_participant,'-',
-                                       'partner_', this_partner_type,'-',
-                                       'task_', this_task,'-',
-                                       'wavelet_',next_list,'.csv'),
-                           sep=",")
-      }
-
-      # return the biwavelet object
-      return(coherence_wavelet)
-    }
+      # only proceed if the next dataframe has an observation
+      if (dim(df)[1]>0){
+        
+        # figure out the information for the dyad
+        this_participant = unique(df$participant_id)
+        this_partner_type = unique(df$partner_type_str)
+        this_task = unique(df$task_str)
+        
+        # set up for analyses
+        person_0 = dplyr::select(df,
+                                 t, movement_0)
+        person_1 = dplyr::select(df,
+                                 t, movement_1)
+        
+        # calculate coherence
+        coherence_wavelet = biwavelet::wtc(person_0,
+                                           person_1,
+                                           sig.level = .95)
+        
+        # print each list to a separate file
+        for (next_list in names(coherence_wavelet)){
+          MASS::write.matrix(x = coherence_wavelet[[next_list]],
+                             file=paste0('./data/wavelet/',
+                                         'participant_', this_participant,'-',
+                                         'partner_', this_partner_type,'-',
+                                         'task_', this_task,'-',
+                                         'wavelet_',next_list,'.csv'),
+                             sep=",")
+        }
+        
+        # return the biwavelet object
+        return(coherence_wavelet)
+      }}
 }
 
 # specify raw sampling rate
@@ -125,19 +128,19 @@ eval(parse(text = pander_lme_file))
 #' so that the interpreter can run the commands.
 
 rmd2rscript <- function(infile, outname){
-
+  
   # read the file
   flIn <- readLines(infile)
-
+  
   # identify the start of code blocks
   cdStrt <- which(grepl(flIn, pattern = "```{r*", perl = TRUE))
-
+  
   # identify the end of code blocks
   cdEnd <- sapply(cdStrt, function(x){
     preidx <- which(grepl(flIn[-(1:x)], pattern = "```", perl = TRUE))[1]
     return(preidx + x)
   })
-
+  
   # define an expansion function
   # strip code block indacators
   flIn[c(cdStrt, cdEnd)] <- ""
@@ -148,14 +151,14 @@ rmd2rscript <- function(infile, outname){
   }
   idx <- unlist(mapply(FUN = expFun, strt = cdStrt, End = cdEnd,
                        SIMPLIFY = FALSE))
-
+  
   # add comments to all lines except code blocks
   comIdx <- 1:length(flIn)
   comIdx <- comIdx[-idx]
   for(i in comIdx){
     flIn[i] <- paste("#' ", flIn[i], sep = "")
   }
-
+  
   # create an output file
   flOut <- file(paste(outname, "[rmd2r].R", sep = ""), "w")
   for(i in 1:length(flIn)){
