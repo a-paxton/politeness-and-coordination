@@ -9,27 +9,26 @@
 
 # list of required packages as strings
 required_packages = c(
-  'plyr',
   'dplyr',
   'stringr',
   'data.table',
   'lme4',
   'ggplot2',
   'pander',
+  'grid',
   'gridExtra',
   'plotrix',
   'gtable',
   'viridis',
-  'jsonlite',
   'tidyr',
   'tibble',
   'RCurl',
-  'signal',
-  'tseriesChaos',
-  'nonlinearTseries',
-  'crqa',
-  # 'beepr',
-  'quantmod'
+  'TTR',
+  'biwavelet',
+  'doParallel',
+  'foreach',
+  'MASS',
+  'parallel'
 )
 
 # install missing packages (adapted from <http://stackoverflow.com/a/4090208>)
@@ -37,5 +36,3 @@ missing_packages = required_packages[!(required_packages %in% installed.packages
 if (length(missing_packages) > 0) {
   install.packages(missing_packages)
 }
-
-
