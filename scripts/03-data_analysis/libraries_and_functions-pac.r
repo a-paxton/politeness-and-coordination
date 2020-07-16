@@ -46,7 +46,7 @@ options(digits=14)
 pt = function(x) {return((1 - pnorm(abs(x))) * 2)}
 
 # create a function to be applied over a `split` df
-parallel_wavelets <- function(dfs) {
+parallel_wavelets <- function(dfs, directory) {
   
   # cycle through each subset
   foreach(
@@ -77,7 +77,7 @@ parallel_wavelets <- function(dfs) {
         # print each list to a separate file
         for (next_list in names(coherence_wavelet)){
           MASS::write.matrix(x = coherence_wavelet[[next_list]],
-                             file=paste0('./data/wavelet/',
+                             file=paste0(directory,'/',
                                          'participant_', this_participant,'-',
                                          'partner_', this_partner_type,'-',
                                          'task_', this_task,'-',
