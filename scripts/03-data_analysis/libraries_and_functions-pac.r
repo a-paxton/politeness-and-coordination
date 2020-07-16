@@ -1,10 +1,10 @@
 #### libraries_and_functions-pac.r: Part of `politeness_and_coordination.Rmd` ####
 #
-# This script loads libraries and creates a number of 
+# This script loads libraries and creates a number of
 # additional functions to facilitate data prep and analysis.
 #
 # Written by: A. Paxton (University of Connecticut)
-# Date last modified: 15 May 2019
+# Date last modified: 16 July 2020
 #####################################################################################
 
 #### Load necessary packages ####
@@ -22,11 +22,15 @@ required_packages = c(
   'plotrix',
   'gtable',
   'viridis',
-  'jsonlite',
   'tidyr',
   'tibble',
   'RCurl',
-  'TTR'
+  'TTR',
+  'biwavelet',
+  'doParallel',
+  'foreach',
+  'MASS',
+  'parallel'
 )
 
 # load required packages
@@ -41,46 +45,46 @@ options(digits=14)
 # function to return p-values from t-values
 pt = function(x) {return((1 - pnorm(abs(x))) * 2)}
 
-# function to do a moving average from both sides of a time series (thanks to https://stackoverflow.com/a/4862334)
-ma <- function(x, n = 5){stats::filter(x, rep(1 / n, n), sides = 2)}
+# create a function to be applied over a `split` df
+parallel_wavelets <- function(dfs) {
 
-# function to identify first local minimum (inspired by https://stackoverflow.com/a/6836583)
-first_local_minimum <- function(ts){
-  
-  # implement simple moving average and get diff
-  smoothed_ts = ma(ts, n=20)
-  minima_df = data.frame(loc = seq_along(ts)-1,
-                         ami = smoothed_ts,
-                         diff = c(NA,NA,diff(sign(diff(smoothed_ts)))))
-  
-  # identify our local minima
-  local_minima = minima_df %>%
-    dplyr::filter(diff==2) %>%
-    .$loc - 1
-  
-  # if we don't have a minimum, assign something
-  if (length(local_minima)==0){ 
-    flm = as.numeric(which(diff(ts)==max(diff(ts))))-1 
-  } else {
-    
-    # figure out how much we lose in AMI at each step
-    viable_minima = minima_df %>%
-      dplyr::filter(loc %in% local_minima) %>%
-      mutate(loss = c(0,diff(ami)),
-             loss_prop = ami/ami[1])
-    chosen_minima = viable_minima %>%
-      dplyr::filter(loss_prop < .2 |
-                      loss_prop==1)
+  # cycle through each subset
+  foreach(
+    i = seq_along(dfs)) %dopar% {
 
-    if (dim(chosen_minima)[1] >= 2){
-      flm = chosen_minima %>%
-        dplyr::filter(ami == min(ami)) %>%
-        .$loc
-    } else {
-      flm = viable_minima$loc[1]
+      # grab the next dataframe
+      df <- dfs[[i]]
+      
+      # figure out the information for the dyad
+      this_participant = unique(df$participant_id)
+      this_partner_type = unique(df$partner_type_str)
+      this_task = unique(df$task_str)
+
+      # set up for analyses
+      person_0 = dplyr::select(df,
+                               t, movement_0)
+      person_1 = dplyr::select(df,
+                               t, movement_1)
+
+      # calculate coherence
+      coherence_wavelet = biwavelet::wtc(person_0,
+                                         person_1,
+                                         sig.level = .95)
+
+      # print each list to a separate file
+      for (next_list in names(coherence_wavelet)){
+        MASS::write.matrix(x = coherence_wavelet[[next_list]],
+                           file=paste0('./data/wavelet/',
+                                       'participant_', this_participant,'-',
+                                       'partner_', this_partner_type,'-',
+                                       'task_', this_task,'-',
+                                       'wavelet_',next_list,'.csv'),
+                           sep=",")
+      }
+
+      # return the biwavelet object
+      return(coherence_wavelet)
     }
-  }
-  return(flm)
 }
 
 # specify raw sampling rate
@@ -106,34 +110,34 @@ pander_lme_url = "https://raw.githubusercontent.com/a-paxton/stats-tools/bee546f
 pander_lme_file = getURL(pander_lme_url, ssl.verifypeer = FALSE)
 eval(parse(text = pander_lme_file))
 
-#### Crib other folks' functions #### 
+#### Crib other folks' functions ####
 
 #' Adapted from rmd2rscript: script for converting .Rmd files to .R scripts
-#' 
+#'
 #' Thanks to Kevin Keenan:
 #' http://rstudio-pubs-static.s3.amazonaws.com/12734_0a38887f19a34d92b7311a2c9cb15022.html
-#' 
-#' This function will read a standard R markdown source file and convert it to 
+#'
+#' This function will read a standard R markdown source file and convert it to
 #' an R script to allow the code to be run using the "source" function.
-#' 
-#' The function is quite simplisting in that it reads a .Rmd file and adds 
+#'
+#' The function is quite simplisting in that it reads a .Rmd file and adds
 #' comments to non-r code sections, while leaving R code without comments
 #' so that the interpreter can run the commands.
 
 rmd2rscript <- function(infile, outname){
-  
+
   # read the file
   flIn <- readLines(infile)
-  
+
   # identify the start of code blocks
   cdStrt <- which(grepl(flIn, pattern = "```{r*", perl = TRUE))
-  
+
   # identify the end of code blocks
   cdEnd <- sapply(cdStrt, function(x){
     preidx <- which(grepl(flIn[-(1:x)], pattern = "```", perl = TRUE))[1]
     return(preidx + x)
   })
-  
+
   # define an expansion function
   # strip code block indacators
   flIn[c(cdStrt, cdEnd)] <- ""
@@ -142,16 +146,16 @@ rmd2rscript <- function(infile, outname){
     End <- End-1
     return(strt:End)
   }
-  idx <- unlist(mapply(FUN = expFun, strt = cdStrt, End = cdEnd, 
+  idx <- unlist(mapply(FUN = expFun, strt = cdStrt, End = cdEnd,
                        SIMPLIFY = FALSE))
-  
+
   # add comments to all lines except code blocks
   comIdx <- 1:length(flIn)
   comIdx <- comIdx[-idx]
   for(i in comIdx){
     flIn[i] <- paste("#' ", flIn[i], sep = "")
   }
-  
+
   # create an output file
   flOut <- file(paste(outname, "[rmd2r].R", sep = ""), "w")
   for(i in 1:length(flIn)){

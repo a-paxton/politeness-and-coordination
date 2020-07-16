@@ -8,43 +8,41 @@ output:
 ---
 
 This R markdown provides the data preparation for our project analyzing how
-power and politeness affect interpersonal movement synchrony during a variety
-of interaction tasks (Paxton, Brown, & Winter, *in preparation*).
+power and politeness affect interpersonal movement synchrony during a variety of
+interaction tasks (Paxton, Brown, & Winter, *in preparation*).
 
 To run this from scratch, you will need the following files:
 
-* `./data/movement_dataframes-aggregated/`: Directory of movement data
-derived from videos (30 FPS) using a frame-differencing method (e.g., Paxton
-& Dale, 2013, *Behavior Research Methods*). De-identified movement data are
-freely available in the OSF repository for the project: `https://osf.io/wrzf2/`.
-* `./scripts/03-data_analysis/required_packages-pac.r`: Installs required libraries,
-if they are not already installed. **NOTE**: This should be run *before* running
-this script.
+* `./data/movement_dataframes-aggregated/`: Directory of movement data derived
+  from videos (30 FPS) using a frame-differencing method (e.g., Paxton & Dale,
+  2013, *Behavior Research Methods*). De-identified movement data are freely
+  available in the OSF repository for the project: `https://osf.io/wrzf2/`.
+* `./scripts/03-data_analysis/required_packages-pac.r`: Installs required
+  libraries, if they are not already installed. **NOTE**: This should be run
+  *before* running this script.
 * `./scripts/03-data_analysis/libraries_and_functions-pac.r`: Loads in necessary
-libraries and creates new functions for our analyses.
+  libraries and creates new functions for our analyses.
 
 Additional files will be created during the initial run that will help reduce processing
 time. Many of these are available as CSVs from the OSF repository listed above.
 
 **Code written by**: A. Paxton (University of Connecticut)
 
-**Date last modified**: 10 June 2019
+**Date last modified**: 20 July 2019
 
 ***
 
 # Data import
 
-**NOTE**: The chunks of code in this section do not have to be run each time,
-since the resulting datasets will be saved to CSV files. As a result, these
-chunks are currently set to `eval=FALSE`. Bear this in mind if these data
-need to be re-calculated.
-
 ***
 
 ## Preliminaries
 
-This section clears the workspace, loads (and, if needed, installs) required
-packages, and specifies important global variables.
+This section clears the workspace, loads required packages, and specifies
+important global variables.
+
+**Remember** to have run `./scripts/03-data_analysis/required_packages-pac.r`
+locally *first*, to ensure that you have all necessary packages installed.
 
 ```{r prep-prelim, warning = FALSE, error = FALSE, message = FALSE}
 
@@ -54,8 +52,9 @@ rm(list=ls())
 # turn on caching
 knitr::opts_chunk$set(cache=TRUE, autodep=TRUE, cache.lazy=FALSE)
 
-# if needed, uncomment this to install libraries
-source('./scripts/03-data_analysis/required_packages-pac.r')
+# set random seed, with options for parallelizations (later)
+RNGkind("L'Ecuyer-CMRG")
+set.seed(111)
 
 # read in libraries and create functions
 source('./scripts/03-data_analysis/libraries_and_functions-pac.r')
@@ -66,13 +65,14 @@ source('./scripts/03-data_analysis/libraries_and_functions-pac.r')
 
 ## Pre-process and concatenate movement data
 
-After initial video processing, each video clip produced its own file of movement
-data. Here, we first pre-process the data by downsampling to 10Hz (consistent with previous
-research on movement coordination; cf. Paxton & Dale, 2013, *Behavior Research Methods*).
-We then remove the first and last few seconds of the data from each conversation
-and concatenate all conversations' movement data into a single file.
+After initial video processing, each video clip produced its own file of
+movement data. Here, we first pre-process the data by downsampling to 10Hz
+(consistent with previous research on movement coordination; cf. Paxton & Dale,
+2013, *Behavior Research Methods*). We then remove the first and last few
+seconds of the data from each conversation and concatenate all conversations'
+movement data into a single file.
 
-```{r preprocess-concatenate-data, warning = FALSE, error = FALSE, message = FALSE, eval = TRUE}
+```{r preprocess-concatenate-data, warning = FALSE, error = FALSE, message = FALSE}
 
 # get list of individual conversations included in the data
 conversation_files = list.files('./data/movement_dataframes-aggregated',
@@ -192,14 +192,6 @@ write.table(conversation_df,
 Now that we've prepared the data for recurrence analyses, let's find
 out a bit more about the conversations.
 
-```{r invisible-load-trimmed-for-stats, echo = FALSE}
-
-# invisible chunk: load in the conversation data to correctly display table if everything else is `eval=FALSE`
-conversation_df = read.table('./data/pac-filtered_movement_data.csv',
-                             sep=',',header=TRUE)
-
-```
-
 ```{r summarize-info}
 
 summary_stats = conversation_df %>% ungroup() %>%
@@ -223,7 +215,7 @@ print(summary_duration)
 
 ```
 
-```{r plot-conversation-summary-stats, echo=FALSE, warning = FALSE, error = FALSE, message = FALSE, eval = TRUE}
+```{r plot-conversation-summary-stats, echo=FALSE, warning = FALSE, error = FALSE, message = FALSE}
 
 # separate by different tasks
 map_p_summary_df = filter(summary_stats, task=="Map_I")
@@ -263,27 +255,27 @@ ggsave('./figures/summary_info/pac-conversation_lengths.png',
          ncol = 1
        ))
 
-
 ```
 
 ![**Figure**. Histograms for conversation duration by conversation type.](./figures/summary_info/pac-conversation_lengths.png)
 
 ***
 
-# Recurrence analyses
+# Cross-wavelet analyses
 
-**NOTE**: The chunks of code in this section do not have to be run each time, 
-since the resulting datasets will be saved to CSV files. As a result, these 
-chunks are currently set to `eval=FALSE`. Bear this in mind if these data need 
-to be re-calculated.
+To measure interpersonal coordination, we'll be using *wavelet coherence* (e.g.,
+Grinsted, Moore, & Jevrejeva, 2004, *Nonlinear Processes in Geophysics*). This
+allows us to examine the phase relationship between two signals in time *and*
+frequency.
 
 ***
 
 ## Preliminaries
 
-This section clears the workspace and reads in the prepared data files.
+Before we get going, let's re-read our data (so that we're sure it's clean) and
+prepare our variables.
 
-```{r recurrence-prelims, warning = FALSE, error = FALSE, message = FALSE, eval = TRUE}
+```{r wavelet-prelims, warning = FALSE, error = FALSE, message = FALSE}
 
 # clear our workspace
 rm(list=ls())
@@ -291,43 +283,22 @@ rm(list=ls())
 # read in libraries and functions again
 source('./scripts/03-data_analysis/libraries_and_functions-pac.r')
 
-# read in data
+```
+
+```{r wavelet-data-prep}
+
+# load in our data
 conversation_df = read.table('./data/pac-filtered_movement_data.csv',
                              sep=',',header=TRUE)
 
-```
+# clean up our data
+conversation_df = conversation_df %>%
 
-***
-
-## Identify CRQA parameters
-
-Before we can analyze the data, we need to identify the appropriate parameters 
-for continuous CRQA for the dataset. We identify parameters that provide a 
-steady *rate of recurrence* or *RR* of approximately 5% for each conversation 
-and save these parameters to a CSV file.
-
-```{r crqa-parameters, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE, eval = TRUE}
-
-# run CRQA parameters
-source('./scripts/03-data_analysis/continuous_rqa_parameters-pac.r')
-
-```
-
-***
-
-## Prepare for CRQA and DRPs
-
-```{r ready-for-crqa-drps, eval = TRUE}
-
-# read in our crqa parameters
-conversation_df_crqa = read.table('./data/crqa_data_and_parameters-pac.csv',
-                                  sep=',',header=TRUE) %>%
-  select(-rr, -from.target, -movement_0, -movement_1)
-
-# grab other information from the original df
-supplemental_info = conversation_df %>% ungroup() %>%
-  select(participant_id, partner_type, task, participant_gender, condition) %>%
-  distinct() %>%
+  # spread data to wide form (with fixed variable names)
+  spread(.,
+         interlocutor, movement) %>%
+  rename(movement_0 = '0',
+         movement_1 = '1') %>%
 
   # convert to partner type to numeric
   mutate(partner_type_str = partner_type) %>%
@@ -359,448 +330,47 @@ supplemental_info = conversation_df %>% ungroup() %>%
                                             4,             # Role = 4
                                             5)))))         # Tweety = 5
 
-# combine both
-conversation_df_crqa = full_join(supplemental_info,
-                                 conversation_df_crqa,
-                                 by = c("participant_id",
-                                        "task_str"="task",
-                                        "partner_type_str"="partner_type"))
-
-```
-
-***
-
-## Run CRQA and DRPs
-
-Now that we have our parameters, we run continuous CRQA over each conversation
-for each dyad using the `crqa` function from the `crqa` package (Coco & Dale,
-2014, *Frontiers in Psychology*).
-
-The time series are entered into the `crqa` function to allow us to interpret
-the eventual diagonal recurrence profiles in the same way that the videos were
-taken: Participant-leading dynamics will be reflected in the left half of the
-plot, and partner-leading dynamics will be reflected in the right half of the
-plot.
-
-```{r run-crqa-using-parameters, eval = TRUE}
-
-# identify window size
-target_seconds = 5
-win_size = target_seconds * downsampled_sampling_rate
-
 # slice up the data so that we have one dataset per conversation
-split_convs = split(conversation_df_crqa,
-                    list(conversation_df_crqa$participant_id,
-                         conversation_df_crqa$partner_type,
-                         conversation_df_crqa$task))
-
-# cycle through each conversation using the sliced subsets
-drp_results = data.frame()
-crqa_results = data.frame()
-for (next_conv in split_convs){
-  if (dim(next_conv)[1] > 0){
-    
-    # isolate parameters for this next dyad
-    chosen.delay = unique(next_conv$chosen.delay)
-    chosen.embed = unique(next_conv$chosen.embed)
-    chosen.radius = unique(next_conv$chosen.radius)
-    
-    # get basic info
-    participant_id = unique(next_conv$participant_id)
-    partner_type = unique(next_conv$partner_type)
-    partner_type_str = unique(next_conv$partner_type_str)
-    task = unique(next_conv$task)
-    task_str = unique(next_conv$task_str)
-
-    # print update
-    print(paste0("CRQA: Participant ", participant_id,
-                 ", partner ", partner_type_str,
-                 ", task ", task_str))
-
-    # run cross-recurrence
-    # order time series so that they reflect actual seating in experiment
-    # (left-leading = participant-leading; right-leading = partner-leading)
-    rec_analysis = crqa(ts1=next_conv$rescale.movement_1, # participant
-                        ts2=next_conv$rescale.movement_0, # partner
-                        delay=chosen.delay,
-                        embed=chosen.embed,
-                        r=chosen.radius,
-                        normalize=0, 
-                        rescale=0, 
-                        mindiagline=2,
-                        minvertline=2, 
-                        tw=0, 
-                        whiteline=FALSE,
-                        recpt=FALSE)
-    
-    # save plot-level information to dataframe
-    next_data_line = data.frame(c(participant_id,
-                                  partner_type,
-                                  task,
-                                  rec_analysis[1:9]))
-    names(next_data_line) = c("participant_id", 'partner_type', 'task',
-                              names(rec_analysis[1:9]))
-    crqa_results = rbind.data.frame(crqa_results,next_data_line)
-  
-    # recreate DRP from diagonal lines within our target window
-    diag_lines = spdiags(rec_analysis$RP)
-    subset_plot = data.frame(diag_lines$B[,diag_lines$d >= -win_size & diag_lines$d <= win_size])
-    rr = colSums(subset_plot)/dim(subset_plot)[1]
-  
-    # convert to dataframe, padding (with 0) where no RR was observed
-    next_drp = dplyr::full_join(data.frame(lag = as.integer(stringr::str_replace(names(rr),'X',''))-(win_size+1),
-                                           rr = rr),
-                         data.frame(lag = -win_size:win_size),
-                         by='lag')
-    next_drp[is.na(next_drp)] = 0
-  
-    # save it to dataframe
-    next_drp$participant_id = participant_id
-    next_drp$partner_type = partner_type
-    next_drp$task = task
-    drp_results = rbind.data.frame(drp_results,next_drp)
-}}
-
-# save results to file
-write.table(crqa_results,'./data/crqa_results-pac.csv',sep=",")
-write.table(drp_results,'./data/drp_results-pac.csv',sep=',')
+split_convs = split(conversation_df,
+                    list(conversation_df$participant_id,
+                         conversation_df$partner_type,
+                         conversation_df$task))
 
 ```
 
 ***
 
-## Export merged recurrence dataset
+## Parallelized wavelet coherence analyses
 
-```{r merge-recurrence-datasets, eval = TRUE}
+We have a large number of individual interactions to analyze. As a result, we
+will take advantage of R's ability to facilitate *parallelization*, or
+splitting activity across multiple cores so that we can run the code faster.
+Because each interaction can be analyze independently, we have the opportunity
+to run each interaction's analysis in parallel rather than in sequence.
 
-# merge CRQA and DRP analysis results
-recurrence_results = full_join(drp_results, crqa_results,
-                               by=c("participant_id", 'partner_type', 'task'))
+**NOTE**: If you are unfamiliar with parallelization, *proceed with caution*. 
+For more reading, check out
+[this guide to parallelism in R by Florian Prive](https://privefl.github.io/blog/a-guide-to-parallelism-in-r/)
+and [this chapter in *R programming for data science*](https://bookdown.org/rdpeng/rprogdatascience/parallel-computation.html).
 
-# merge recurrence analyses and condition information
-recurrence_df = full_join(recurrence_results, supplemental_info,
-                          by=c("participant_id", 'partner_type', 'task'))
+```{r wavelet-prep-for-parallel}
 
-# save to file
-write.table(recurrence_df,'./data/recurrence_df-pac.csv',sep=',')
+# identify number of cores available
+available_cores = detectCores() - 1
 
+# initialize a pseudo-cluster with available cores
+pseudo_cluster = parallel::makeCluster(available_cores,
+                                       setup_strategy="sequential")
+
+# create a directory for our output, if we don't have one yet
+dir.create("./data/wavelet",
+           showWarnings = TRUE,
+           recursive = TRUE)
+
+# parallelize our wavelet analyses
+doParallel::registerDoParallel(pseudo_cluster)
+x = parallel_wavelets(subset_split)
+
+# stop the pseudocluster
+stopCluster(pseudo_cluster)
 ```
-
-***
-
-# Data preparation
-
-Now that we've calculated our CRQA and DRP measures, we're ready to prepare our data for analysis.
-
-**NOTE**: The chunks of code in this section do not have to be run each time, 
-since the resulting datasets will be saved to CSV files. As a result, these chunks 
-are currently set to `eval=FALSE`. Bear this in mind if these data need to be re-calculated.
-
-***
-
-## Preliminaries
-
-This section clears the workspace and reads in the prepared data files.
-
-```{r prep-data-prep, warning=FALSE, error=FALSE, message=FALSE, eval = TRUE}
-
-# clear our workspace
-rm(list=ls())
-
-# read in libraries and create functions
-source('./scripts/03-data_analysis/libraries_and_functions-pac.r')
-
-# read in the recurrence dataframe
-recurrence_df = read.table('./data/recurrence_df-pac.csv', sep=',', header=TRUE)
-
-```
-
-***
-
-## Create first- and second-order polynomials
-
-In order to examine the linear and curvilinear patterns in the DRPs (cf.
-Main, Paxton, & Dale, 2016, *Emotion*), we create orthogonal polynomials
-for the lag term. This section creates the first- and second-order
-othogonal polynomials that are essential to allowing us to interpret the
-linear (i.e., first-order polynomial) and quadratic (i.e., second-order
-polynomial) patterns in the DRP independently from one another.
-
-```{r create-polynomials, eval = TRUE}
-
-# create first- and second-order orthogonal polynomials for lag
-raw_lag = min(recurrence_df$lag):max(recurrence_df$lag)
-lag_vals = data.frame(raw_lag)
-lag_offset = (0-min(raw_lag)) + 1
-t = stats::poly((raw_lag + lag_offset), 2)
-lag_vals[, paste("ot", 1:2, sep="")] = t[lag_vals$raw_lag + lag_offset, 1:2]
-
-# join it to the original data table
-recurrence_df = left_join(recurrence_df,lag_vals, by = c("lag" = "raw_lag"))
-
-```
-
-***
-
-## Specify precision
-
-```{r specify-precision, eval=FALSE}
-
-recurrence_df = recurrence_df %>% ungroup() %>%
-  mutate_all(funs(sprintf("%.14f",.)))
-
-```
-
-***
-
-## Export dataframe
-
-```{r export-dataframe, eval = TRUE}
-
-# export dataframe
-dput(recurrence_df, './data/plotting_df-pac.csv')
-
-```
-
-***
-
-# Data analysis
-
-Our data are clean, our parameters are identified, and our dataframe
-is ready to go. We now analyze our data and generate visualizations.
-
-***
-
-## Preliminaries
-
-This section clears the workspace and reads in the prepared data files.
-
-```{r analysis-prelim, warning=FALSE, error=FALSE, message=FALSE}
-
-# clear our workspace
-rm(list=ls())
-
-# read in libraries and create functions
-source('./scripts/03-data_analysis/libraries_and_functions-pac.r')
-
-# read in the plotting dataframe
-rec_plot = dget('./data/plotting_df-pac.csv') %>% mutate_all(funs(as.numeric(.)))
-
-# make sure we treat factors as factors
-rec_plot = rec_plot %>% ungroup() %>%
-  mutate_at(vars(one_of(factor_variables)),
-            funs(as.factor))
-
-```
-
-***
-
-## Recurrence by lag, partner type, and task
-
-We now create a linear mixed-effects model to gauge how
-linear lag (`ot1`) and quadratic lag (`ot2`) interact with
-partner type (`partner_type`) and task (`task`) to
-influence overall body movement coordination (`rr`).
-
-```{r rr-parner-task-gca-raw}
-
-# model
-rr_partner_task_gca_raw = lmer(rr ~ ot1 * ot2 * partner_type * task +
-                                 (1 + partner_type | participant_id),
-                               data = rec_plot, REML = FALSE)
-
-# readable output
-pander_lme(rr_partner_task_gca_raw)
-
-```
-
-***
-
-## Exploring interaction terms
-
-In order to understand the higher-order interactions, we
-create separate datasets for the friend and professor
-conversations and then re-run the model as above.
-
-### Create separate dataframes
-
-```{r create-separate-dataframes}
-
-# create friend raw dataframe
-friend_raw = rec_plot %>% ungroup() %>%
-  mutate_all(funs(as.numeric)) %>%
-  dplyr::filter(partner_type == min(partner_type))
-
-# create professor raw dataframe
-professor_raw = rec_plot %>% ungroup() %>%
-  mutate_all(funs(as.numeric)) %>%
-  dplyr::filter(partner_type == max(partner_type))
-
-# convert to factors
-friend_raw = friend_raw %>% ungroup() %>%
-  mutate_at(vars(one_of(factor_variables)), funs(as.factor))
-professor_raw = professor_raw %>% ungroup() %>%
-  mutate_at(vars(one_of(factor_variables)), funs(as.factor))
-
-```
-
-### Friend-only model
-
-```{r friend-model-raw}
-
-# friends: unstandardized (raw) model
-rr_friend_task_gca_raw = lmer(rr ~ ot1 * ot2 * task +
-                                (1 | participant_id),
-                              data = friend_raw, REML = FALSE)
-pander_lme(rr_friend_task_gca_raw)
-
-```
-
-### Professor-only model
-
-```{r prof-model-raw}
-
-# professor: unstandardized (raw) model
-rr_prof_task_gca_raw = lmer(rr ~ ot1 * ot2 * task +
-                              (1 | participant_id),
-                            data = professor_raw, REML = FALSE)
-pander_lme(rr_prof_task_gca_raw)
-
-```
-
-***
-
-# Discussion
-
-***
-
-```{r plot-three-way-interaction, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE, eval = TRUE}
-
-# read in the raw datasets
-rec_plot = dget('./data/plotting_df-pac.csv') %>%
-  mutate_all(funs(as.numeric(.))) %>%
-  mutate(lag = lag/20)
-
-# split plotting dataframe by partner type
-condition_dfs = split(rec_plot,
-                      rec_plot$partner_type)
-friend_data = condition_dfs[[1]]
-prof_data = condition_dfs[[2]]
-
-# plot friend data
-friend_plot = ggplot(friend_data,
-                     aes(x=lag,
-                         y=rr,
-                         color=as.factor(task))) +
-  scale_colour_viridis(name = "Task",
-                       breaks=c(1,
-                                2,
-                                3,
-                                4,
-                                5),
-                       labels=c('Convers.',
-                                'Map - Participant',
-                                'Map - Partner',
-                                'Role',
-                                'Tweety'),
-                       discrete=TRUE) +
-  theme(legend.position = "none") +
-  stat_smooth() +
-  ggtitle('Friend') +
-  xlab(paste('Lag (in sec; ', downsampled_sampling_rate,' Hz)', sep="")) + ylab('Mean RR') +
-  coord_cartesian(ylim = c(0,
-                           max(c(mean(friend_data$rr),mean(prof_data$rr))) + .1))
-
-# plot professor data
-prof_plot = ggplot(prof_data,
-                   aes(x=lag,
-                       y=rr,
-                       color=as.factor(task))) +
-  scale_colour_viridis(name = "Task",
-                       breaks=c(1,
-                                2,
-                                3,
-                                4,
-                                5),
-                       labels=c('Convers.',
-                                'Map - Participant',
-                                'Map - Partner',
-                                'Role',
-                                'Tweety'),
-                       discrete=TRUE) +
-  theme(legend.position = "none") +
-  stat_smooth() +
-  ggtitle('Professor') +
-  xlab(paste('Lag (in sec; ', downsampled_sampling_rate,' Hz)', sep="")) + ylab('') +
-  coord_cartesian(ylim = c(0,
-                           max(c(mean(friend_data$rr),mean(prof_data$rr))) + .1))
-
-# create another noise plot just for the legend
-friend_plot_legend = ggplot(friend_data,
-                            aes(x=lag,
-                                y=rr,
-                                color=as.factor(task))) +
-  scale_colour_viridis(name = "Task",
-                       breaks=c(1,
-                                2,
-                                3,
-                                4,
-                                5),
-                       labels=c('Convers.',
-                                'Map - Participant',
-                                'Map - Partner',
-                                'Role',
-                                'Tweety'),
-                       discrete=TRUE) +
-  ggtitle('Friend') +
-  stat_smooth() +
-  coord_cartesian(ylim = c(0,
-                           max(c(mean(friend_data$rr),mean(prof_data$rr))) + .1))
-
-# create a master legend
-master_legend = gtable_filter(ggplot_gtable(
-  ggplot_build(friend_plot_legend +
-                 theme(legend.position="bottom"))),
-  "guide-box")
-
-# save to file for manuscript submission
-ggsave('./figures/pac-interaction-RR_lag_partner_task.png',
-       units = "in", width = 5.5, height = 5,
-       grid.arrange(
-         top=textGrob("Body movement synchrony\nby partner type and task",
-                      gp=gpar(fontsize=14)),
-         friend_plot,
-         prof_plot,
-         bottom=master_legend,
-         ncol = 2
-       ))
-
-# save smaller version for knitr
-ggsave('./figures/pac-interaction-RR_lag_partner_task-knitr.png',
-       units = "in", width = 5.5, height = 5, dpi = 100,
-       grid.arrange(
-         top=textGrob("Body movement synchrony\nby partner type and task",
-                      gp=gpar(fontsize=14)),
-         friend_plot,
-         prof_plot,
-         bottom=master_legend,
-         ncol = 2
-       ))
-
-# save tiff version
-tiff('./figures/pac-interaction-RR_lag_partner_task.tiff',
-     units = "in", width = 5.5, height = 5, res=300)
-grid.arrange(
-  top=textGrob("Body movement synchrony\nby partner type and task",
-               gp=gpar(fontsize=14)),
-  friend_plot,
-  prof_plot,
-  bottom=master_legend,
-  ncol = 2
-)
-dev.off()
-
-
-```
-
-![**Figure**. Diagonal recurrence profiles (DRPs) for friends (left panel) and professor (right panel) by interaction type (purple = conversation; blue = map task; green = role-play; yellow = Tweety vignette retelling) within a 5-second window (sampled at 20Hz). In both panels, peaks on negative lags indiciate that the particiant was leading, and peaks on the positive lags indicate that the partner was leading.](./figures/pac-interaction-RR_lag_partner_task-knitr.png)
