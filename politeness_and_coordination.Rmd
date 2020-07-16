@@ -358,7 +358,11 @@ available_cores = detectCores() - 1
 
 # initialize a pseudo-cluster with available cores
 pseudo_cluster = parallel::makeCluster(available_cores,
+                                       type="FORK",
                                        setup_strategy="sequential")
+
+# set seed for everyone
+parallel::clusterSetRNGStream(pseudo_cluster, iseed = 111)
 
 # create a directory for our output, if we don't have one yet
 dir.create("./data/wavelet_results",
