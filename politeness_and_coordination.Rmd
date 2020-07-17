@@ -381,7 +381,7 @@ parallel::clusterSetRNGStream(pseudo_cluster, iseed = 111)
 # parallelize our wavelet analyses
 doParallel::registerDoParallel(pseudo_cluster)
 source('./scripts/03-data_analysis/parallel_wavelets.R')
-parallel_wavelets(test_convs, 
+parallel_wavelets(split_convs, 
                   raw_output_directory,
                   processed_output_directory,
                   figure_directory)
