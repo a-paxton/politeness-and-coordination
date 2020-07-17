@@ -365,14 +365,25 @@ pseudo_cluster = parallel::makeCluster(available_cores,
 parallel::clusterSetRNGStream(pseudo_cluster, iseed = 111)
 
 # create a directory for our output, if we don't have one yet
-output_directory = "./data/wavelet_results" 
-dir.create(output_directory,
+raw_output_directory = "./data/wavelet_results_raw" 
+processed_output_directory = "./data/wavelet_results_processed"
+figure_directory = "./figures/wavelets"
+dir.create(raw_output_directory,
+           showWarnings = TRUE,
+           recursive = TRUE)
+dir.create(processed_output_directory,
+           showWarnings = TRUE,
+           recursive = TRUE)
+dir.create(figure_directory,
            showWarnings = TRUE,
            recursive = TRUE)
 
 # parallelize our wavelet analyses
 doParallel::registerDoParallel(pseudo_cluster)
-parallel_wavelets(split_convs, output_directory)
+parallel_wavelets(split_convs, 
+                  raw_output_directory,
+                  processed_output_directory,
+                  figure_directory)
 
 # stop the pseudocluster
 stopCluster(pseudo_cluster)
