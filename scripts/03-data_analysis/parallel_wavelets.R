@@ -122,32 +122,32 @@ parallel_wavelets <- function(dfs,
                               'mean_sig_time_power.csv'),
                   row.names = FALSE,
                   sep=",")
-
-      # save plots
-      png(filename=paste0(figure_directory,'/',
-                          'participant_', this_participant,'-',
-                          'partner_', this_partner_type,'-',
-                          'task_', this_task,'-',
-                          'wavelet.png'),
-          width = 7, height = 5, units = "in",
-          resolution = 300)
-      par(oma = c(0, 0, 0, 1), mar = c(5, 4, 5, 5) + 0.1)
-      plot(coherence_wavelet,
-           plot.phase = TRUE,
-           lty.coi = 1,
-           col.coi = "grey",
-           lwd.coi = 3,
-           lwd.sig = 2,
-           arrow.lwd = 0.03,
-           arrow.len = 0.05,
-           ylab = "Scale", xlab = "Period",
-           plot.cb = TRUE,
-           main = paste0("Wavelet Coherence:\n ",
-                         'Participant ', this_participant,', ',
-                         this_partner_type, ' Partner, ',
-                         this_task, ' Task'))
-      dev.off()
-
+      
+      # # save plots -- unsure why this causes parallelized processes to hang
+      # png(filename=paste0(figure_directory,'/',
+      #                     'participant_', this_participant,'-',
+      #                     'partner_', this_partner_type,'-',
+      #                     'task_', this_task,'-',
+      #                     'wavelet.png'),
+      #     width = 7, height = 5, units = "in",
+      #     res = 300)
+      # par(oma = c(0, 0, 0, 1), mar = c(5, 4, 5, 5) + 0.1)
+      # biwavelet::plot.biwavelet(coherence_wavelet,
+      #                           plot.phase = TRUE,
+      #                           lty.coi = 1,
+      #                           col.coi = "grey",
+      #                           lwd.coi = 3,
+      #                           lwd.sig = 2,
+      #                           arrow.lwd = 0.03,
+      #                           arrow.len = 0.05,
+      #                           ylab = "Scale", xlab = "Period",
+      #                           plot.cb = TRUE,
+      #                           main = paste0("Wavelet Coherence:\n ",
+      #                                         'Participant ', this_participant,', ',
+      #                                         this_partner_type, ' Partner, ',
+      #                                         this_task, ' Task'))
+      # dev.off()
+      
       # clear the biwavelet object to save some space
       rm(coherence_wavelet)
     }}
