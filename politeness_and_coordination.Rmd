@@ -14,14 +14,14 @@ interaction tasks (Paxton, Brown, & Winter, *in preparation*).
 To run this from scratch, you will need the following files:
 
 * `./data/movement_dataframes-aggregated/`: Directory of movement data derived
-  from videos (30 FPS) using a frame-differencing method (e.g., Paxton & Dale,
-  2013, *Behavior Research Methods*). De-identified movement data are freely
-  available in the OSF repository for the project: `https://osf.io/wrzf2/`.
+from videos (30 FPS) using a frame-differencing method (e.g., Paxton & Dale,
+2013, *Behavior Research Methods*). De-identified movement data are freely
+available in the OSF repository for the project: `https://osf.io/wrzf2/`.
 * `./scripts/03-data_analysis/required_packages-pac.r`: Installs required
-  libraries, if they are not already installed. **NOTE**: This should be run
-  *before* running this script.
+libraries, if they are not already installed. **NOTE**: This should be run
+*before* running this script.
 * `./scripts/03-data_analysis/libraries_and_functions-pac.r`: Loads in necessary
-  libraries and creates new functions for our analyses.
+libraries and creates new functions for our analyses.
 
 Additional files will be created during the initial run that will help reduce processing
 time. Many of these are available as CSVs from the OSF repository listed above.
@@ -81,11 +81,11 @@ conversation_files = list.files('./data/movement_dataframes-aggregated',
 # process each file
 conversation_df = data.frame()
 for (conversation_file in conversation_files){
-
+  
   # read in next file
   next_conversation = read.table(conversation_file, sep=',',
                                  header=TRUE, stringsAsFactors = FALSE)
-
+  
   # split info from dyad
   if (!grepl("Map", conversation_file)){
     next_conversation = next_conversation %>% ungroup() %>%
@@ -94,17 +94,17 @@ for (conversation_file in conversation_files){
                               'partner_type',
                               'task',
                               'condition'), sep='_') %>%
-
+      
       # remove .mov extension from condition
       mutate(condition = sub(pattern = "(.*?)\\..*$",
                              replacement = "\\1",
                              condition))  %>%
-
+      
       # delineate movement between target participant (1 / L) and partner (0 / R)
       mutate(participant = ifelse(participant=='left',
                                   1,
                                   0))
-
+    
   } else {
     next_conversation = next_conversation %>% ungroup() %>%
       separate(dyad, into = c('participant_id',
@@ -113,54 +113,54 @@ for (conversation_file in conversation_files){
                               'task',
                               'condition',
                               'map_cond'), sep='_') %>%
-
+      
       # fix the task information to include who led (participant vs. interlocutor)
       unite(task, c('task','map_cond')) %>%
       mutate(task = sub(pattern = "(.*?)\\..*$",
                         replacement = "\\1",
                         task)) %>%
-
+      
       # delineate movement between target participant (1 / L) and partner (0 / R)
       mutate(participant = ifelse(participant=='left',
                                   1,
                                   0))
   }
-
+  
   # decimate movement
   conversations_split = split(next_conversation,
                               next_conversation$participant)
   decimated_df = data.frame()
   for (next_ts in conversations_split){
-
+    
     # decimate the signal
     next_ts = dplyr::arrange(next_ts, difference_number)
     movement = signal::decimate(x = next_ts$movement, q = 3)
-
+    
     # reconstitute the dataframe
     next_ts = data.frame(next_ts) %>% ungroup() %>%
-
+      
       # grab only the top-line data we need and remove old movement variable
       slice(1) %>%
       dplyr::select(-difference_number,
                     -movement) %>%
-
+      
       # add the decimated movement and create time variable
       cbind(., movement) %>%
       rownames_to_column(var="frame") %>%
       mutate(t = as.numeric(frame) / 10) %>%
-
+      
       # trim the beginning and end (instructions and wrap-up time)
       dplyr::filter(t > trimmed_time,
                     t < (max(t) - trimmed_time)) %>%
-
+      
       # rename participant
       dplyr::rename(interlocutor = participant)
-
+    
     # add to shell
     decimated_df = rbind.data.frame(decimated_df,
                                     next_ts)
   }
-
+  
   # save plot of movement with beginning and end trimmed
   trimmed_movement_plot = ggplot(decimated_df,
                                  aes(x = t,
@@ -174,7 +174,7 @@ for (conversation_file in conversation_files){
          width = 3,
          filename = paste0('./figures/movement-trimmed/pac-trimmed_movement-',
                            basename(conversation_file),'.jpg'))
-
+  
   # append dataframe to group files
   conversation_df = rbind.data.frame(conversation_df,
                                      decimated_df)
@@ -293,31 +293,31 @@ conversation_df = read.table('./data/pac-filtered_movement_data.csv',
 
 # clean up our data
 conversation_df = conversation_df %>%
-
+  
   # spread data to wide form (with fixed variable names)
   spread(.,
          interlocutor, movement) %>%
   rename(movement_0 = '0',
          movement_1 = '1') %>%
-
+  
   # convert to partner type to numeric
   mutate(partner_type_str = partner_type) %>%
   mutate(partner_type = ifelse(partner_type=='Friend',
                                0,      # friend = 0
                                1)) %>% # prof = 1
-
+  
   # convert to gender to numeric
   mutate(participant_gender_str = participant_gender) %>%
   mutate(participant_gender = ifelse(participant_gender=='F',
                                      0,      # female = 0
                                      1)) %>% # male = 1
-
+  
   # convert to condition to numeric
   mutate(condition_str = condition) %>%
   mutate(condition = ifelse(condition=='AB',
                             0,      # AB = 0
                             1)) %>% # BA = 1
-
+  
   # convert to task to numeric
   mutate(task_str = task) %>%
   mutate(task = ifelse(task=='Convo',
@@ -374,7 +374,7 @@ available_cores = detectCores() - 1
 pseudo_cluster = parallel::makeCluster(available_cores,
                                        type="FORK",
                                        setup_strategy="sequential", 
-                                       outfile = NULL, 
+                                       outfile = 'wavelet_log.txt', 
                                        verbose = TRUE)
 
 # set seed for everyone
