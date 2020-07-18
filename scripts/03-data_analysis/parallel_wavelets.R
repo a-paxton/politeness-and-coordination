@@ -14,7 +14,7 @@ parallel_wavelets <- function(dfs,
                               figure_directory) {
   
   # cycle through each subset
-  foreach(i = seq_along(dfs), .errorhandling='stop') %dopar% {
+  foreach(i = seq_along(dfs), .errorhandling='pass') %dopar% {
     
     # grab the next dataframe
     df <- dfs[[i]]
@@ -74,7 +74,7 @@ parallel_wavelets <- function(dfs,
                                        partner = this_partner_type,
                                        task = this_task,
                                        mean_sig_time_power = base::colMeans(significant_power,
-                                                                       na.rm = TRUE))
+                                                                            na.rm = TRUE))
       
       # write processed metrics
       write.table(x = significant_regions,

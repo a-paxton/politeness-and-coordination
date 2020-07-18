@@ -373,7 +373,9 @@ available_cores = detectCores() - 1
 # initialize a pseudo-cluster with available cores
 pseudo_cluster = parallel::makeCluster(available_cores,
                                        type="FORK",
-                                       setup_strategy="sequential")
+                                       setup_strategy="sequential", 
+                                       outfile = NULL, 
+                                       verbose = TRUE)
 
 # set seed for everyone
 parallel::clusterSetRNGStream(pseudo_cluster, iseed = 111)
