@@ -392,3 +392,37 @@ parallel_wavelets(split_convs,
 stopCluster(pseudo_cluster)
 
 ```
+
+## Gather wavelet outputs
+
+```{r gather-wavelet-output}
+
+# concatenate significant phases from file into a new dataframe
+mean_sig_phases = list.files(processed_output_directory,
+                             pattern = "*mean_sig_phase.csv",
+                             full.names = TRUE, recursive = FALSE) %>%
+  lapply(read.csv, header=TRUE, sep=",") %>% 
+  lapply(rownames_to_column, "n") %>%
+  lapply(mutate, n = as.numeric(n)) %>%
+  bind_rows()
+
+# concatenate significant power from file into a new dataframe
+mean_sig_power = list.files(processed_output_directory,
+                            pattern = "*mean_sig_power.csv",
+                            full.names = TRUE, recursive = FALSE) %>%
+  lapply(read.csv, header=TRUE, sep=",") %>% 
+  lapply(rownames_to_column, "n") %>%
+  lapply(mutate, n = as.numeric(n)) %>%
+  bind_rows()
+
+# concatenate significant phases from file into a new dataframe
+mean_sig_time_power = list.files(processed_output_directory,
+                                 pattern = "*mean_sig_time_power.csv",
+                                 full.names = TRUE, recursive = FALSE) %>%
+  lapply(read.csv, header=TRUE, sep=",") %>% 
+  lapply(rownames_to_column, "n") %>%
+  lapply(mutate, n = as.numeric(n)) %>%
+  bind_rows()
+
+```
+
