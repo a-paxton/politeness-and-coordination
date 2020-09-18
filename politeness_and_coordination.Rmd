@@ -14,14 +14,14 @@ interaction tasks (Paxton, Brown, & Winter, *in preparation*).
 To run this from scratch, you will need the following files:
 
 * `./data/movement_dataframes-aggregated/`: Directory of movement data derived
-from videos (30 FPS) using a frame-differencing method (e.g., Paxton & Dale,
-2013, *Behavior Research Methods*). De-identified movement data are freely
-available in the OSF repository for the project: `https://osf.io/wrzf2/`.
+  from videos (30 FPS) using a frame-differencing method (e.g., Paxton & Dale,
+  2013, *Behavior Research Methods*). De-identified movement data are freely
+  available in the OSF repository for the project: `https://osf.io/wrzf2/`.
 * `./scripts/03-data_analysis/required_packages-pac.r`: Installs required
-libraries, if they are not already installed. **NOTE**: This should be run
-*before* running this script.
+  libraries, if they are not already installed. **NOTE**: This should be run
+  *before* running this script.
 * `./scripts/03-data_analysis/libraries_and_functions-pac.r`: Loads in necessary
-libraries and creates new functions for our analyses.
+  libraries and creates new functions for our analyses.
 
 Additional files will be created during the initial run that will help reduce processing
 time. Many of these are available as CSVs from the OSF repository listed above.
