@@ -5,3 +5,4 @@ slurm_output/
 *.Rhistory
 archive/
 *.html
+*_cache/
