@@ -4,3 +4,4 @@ data/
 slurm_output/
 *.Rhistory
 archive/
+*.html
